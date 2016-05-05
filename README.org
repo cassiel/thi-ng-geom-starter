@@ -15,7 +15,7 @@ Chestnut seems to do its own initial git commit, so if a repository of the same 
   git remote add origin git@github.com:<username>/thi-ng-geom-starter.git
 #+END_SRC
 
-followed by a ~git push~ to get everything synchronised.
+followed by a ~git push -u origin master~ to get everything synchronised.
 
 A couple of notes on the initial project build:
 
