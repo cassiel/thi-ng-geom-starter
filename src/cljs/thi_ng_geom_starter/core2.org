@@ -1,0 +1,88 @@
+-*- mode: org; mode: visual-line; -*-
+#+STARTUP: indent
+
+* TESTING
+** SETUP
+:PROPERTIES:
+:header-args:clojure: :tangle no
+:header-args:clojure: :results output silent
+:END:
+
+To start the Figwheel server:
+
+#+BEGIN_SRC clojure
+  (run)
+#+END_SRC
+
+To switch from Clojure to ClojureScript:
+
+#+BEGIN_SRC clojure :results output verbatim replace
+  (user/browser-repl)
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+Launching ClojureScript REPL for build: app
+Figwheel Controls:
+          (stop-autobuild)                ;; stops Figwheel autobuilder
+          (start-autobuild [id ...])      ;; starts autobuilder focused on optional ids
+          (switch-to-build id ...)        ;; switches autobuilder to different build
+          (reset-autobuild)               ;; stops, cleans, and starts autobuilder
+          (reload-config)                 ;; reloads build config and resets autobuild
+          (build-once [id ...])           ;; builds source one time
+          (clean-builds [id ..])          ;; deletes compiled cljs target files
+          (print-config [id ...])         ;; prints out build configurations
+          (fig-status)                    ;; displays current state of system
+  Switch REPL build focus:
+          :cljs/quit                      ;; allows you to switch REPL to another build
+    Docs: (doc function-name-here)
+    Exit: Control+C or :cljs/quit
+ Results: Stored in vars *1, *2, *3, *e holds last exception object
+Prompt will show when Figwheel connects to your application
+To quit, type: :cljs/quit
+#+end_example
+
+And back:
+
+#+BEGIN_SRC clojure
+:cljs/quit
+#+END_SRC
+
+#+RESULTS:
+: nil
+
+To see which environment we're currently in:
+
+#+BEGIN_SRC clojure :results value verbatim
+  #? (:clj "Clojure" :cljs "ClojureScript")
+#+END_SRC
+
+#+RESULTS:
+: "ClojureScript"
+
+** TESTING
+:PROPERTIES:
+:header-args:clojure: :tangle core2.cljs
+:header-args:         :results value verbatim replace
+:END:
+
+#+BEGIN_SRC clojure
+  (ns thi-ng-geom-starter.core2)
+#+END_SRC
+
+#+RESULTS:
+: nil
+
+#+BEGIN_SRC clojure
+  (def A [10 20 30 40 (str *ns*)])
+#+END_SRC
+
+#+RESULTS:
+: #'thi-ng-geom-starter.core2/A
+
+#+BEGIN_SRC clojure
+  A
+#+END_SRC
+
+#+RESULTS:
+: [10 20 30 40 "thi-ng-geom-starter.core2"]

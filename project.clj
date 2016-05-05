@@ -14,7 +14,9 @@
                  [environ "1.0.2"]
                  [reagent "0.5.1"]]
 
-  :plugins [[lein-cljsbuild "1.1.1"]
+  :plugins [[cider/cider-nrepl "0.9.1"]
+            [refactor-nrepl "1.1.0"]
+            [lein-cljsbuild "1.1.1"]
             [lein-environ "1.0.1"]]
 
   :min-lein-version "2.6.1"

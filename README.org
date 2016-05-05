@@ -1,7 +1,7 @@
 -*- mode: org; mode: visual-line; -*-
 #+STARTUP: indent
 
-* Getting Started
+* Literate Programming
 
 This project was created with
 
@@ -21,4 +21,15 @@ A couple of notes on the initial project build:
 
 - We're using [[https://github.com/plexus/chestnut][Chestnut]] rather than plain [[https://github.com/bhauman/lein-figwheel][Figwheel]] because it seems to bring up a proper ClojureScript REPL that we can connect into from Emacs (in fact, we can switch between them by saying ~(browser-repl)~ from Clojure and ~:cljs/quit~ from ClojureScript)
 - We've gone [[https://reagent-project.github.io/][Reagent]] rather than [[https://github.com/omcljs/om][Om]] for simplicity
-- We've only provided a flat namespace (~thi-ng-geom-starter~) rather than a qualified namespace (~eu.cassiel/[...]~) because of a bug in Chestnut which messes up the directory structure in the latter case
+- We've only provided a flat namespace (~thi-ng-geom-starter~) rather than a qualified namespace (~eu.cassiel/[...]~) because of a bug in Chestnut which messes up the directory structure for qualified names
+
+To get a fully functioning REPL for CIDER, I've added the following plugin dependencies:
+
+- ~[cider/cider-nrepl "0.9.1"]~
+- ~[refactor-nrepl "1.1.0"]~
+
+** Literate
+
+Needs ~(require 'ob-clojure)~
+
+** Tangling
