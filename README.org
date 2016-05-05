@@ -1,0 +1,24 @@
+-*- mode: org; mode: visual-line; -*-
+#+STARTUP: indent
+
+* Getting Started
+
+This project was created with
+
+#+BEGIN_SRC sh
+  lein new chestnut thi-ng-geom-starter -- --reagent
+#+END_SRC
+
+Chestnut seems to do its own initial git commit, so if a repository of the same name is created on GitHub, it just takes a quick
+
+#+BEGIN_SRC sh
+  git remote add origin git@github.com:<username>/thi-ng-geom-starter.git
+#+END_SRC
+
+followed by a ~git push~ to get everything synchronised.
+
+A couple of notes on the initial project build:
+
+- We're using [[https://github.com/plexus/chestnut][Chestnut]] rather than plain [[https://github.com/bhauman/lein-figwheel][Figwheel]] because it seems to bring up a proper ClojureScript REPL that we can connect into from Emacs (in fact, we can switch between them by saying ~(browser-repl)~ from Clojure and ~:cljs/quit~ from ClojureScript)
+- We've gone [[https://reagent-project.github.io/][Reagent]] rather than [[https://github.com/omcljs/om][Om]] for simplicity
+- We've only provided a flat namespace (~thi-ng-geom-starter~) rather than a qualified namespace (~eu.cassiel/[...]~) because of a bug in Chestnut which messes up the directory structure in the latter case
