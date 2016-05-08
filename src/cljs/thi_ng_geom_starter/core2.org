@@ -14,6 +14,9 @@ To start the Figwheel server:
   (run)
 #+END_SRC
 
+#+RESULTS:
+: nil
+
 To switch from Clojure to ClojureScript:
 
 #+BEGIN_SRC clojure :results output verbatim replace
@@ -58,7 +61,7 @@ To see which environment we're currently in:
 #+END_SRC
 
 #+RESULTS:
-: "ClojureScript"
+: "Clojure"
 
 ** TESTING
 :PROPERTIES:
@@ -85,4 +88,4 @@ To see which environment we're currently in:
 #+END_SRC
 
 #+RESULTS:
-: [10 20 30 40 "thi-ng-geom-starter.core2"]
+: [10 20 30 40 ""]

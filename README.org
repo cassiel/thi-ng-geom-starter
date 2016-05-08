@@ -1,7 +1,14 @@
 -*- mode: org; mode: visual-line; -*-
 #+STARTUP: indent
+#+PROPERTY: header-args:emacs-lisp :results output silent
+#+PROPERTY: header-args:clojure :results value verbatim
 
-* Literate Programming
+* thi-ng-geom-starter
+** Overview
+
+This is a test WebGL project using Karsten Schmidt's [[https://github.com/thi-ng][thi.ng]] tools for ClojureScript, written in a [[https://en.wikipedia.org/wiki/Literate_programming][literate programming]] style using [[https://www.gnu.org/software/emacs/][Emacs]], [[http://orgmode.org/][Org mode]] and [[http://orgmode.org/worg/org-contrib/babel/intro.html][Babel]].
+
+** Setup
 
 This project was created with
 
@@ -28,8 +35,123 @@ To get a fully functioning REPL for CIDER, I've added the following plugin depen
 - ~[cider/cider-nrepl "0.9.1"]~
 - ~[refactor-nrepl "1.1.0"]~
 
-** Literate
+** Emacs Setup
 
-Needs ~(require 'ob-clojure)~
+We're using Sam Aaron's [[http://overtone.github.io/emacs-live/][Emacs Live]], which comes with support for Clojure (via [[https://github.com/clojure-emacs/cider][CIDER]]). Org-mode babel [[http://orgmode.org/worg/org-contrib/babel/languages/ob-doc-clojure.html][supports Clojure]], but this needs to be loaded via
 
-** Tangling
+#+BEGIN_SRC emacs-lisp
+  (require 'ob-clojure)
+#+END_SRC
+
+Assuming you trust all the code in this repository, you can turn off confirmation when executing blocks:
+
+#+BEGIN_SRC emacs-lisp
+  (setq org-confirm-babel-evaluate nil)
+#+END_SRC
+
+Testing Clojure
+
+Start a Clojure session in the usual way, via ~M-x cider-jack-in~.
+
+Here's a quick test. In this block, type ~C-c C-c~ to execute the code, or type ~C-c '~ to open a custom editor session for the block, with the usual Clojure editing tools.
+
+#+BEGIN_SRC clojure
+  (range 10)
+#+END_SRC
+
+#+RESULTS:
+: (0 1 2 3 4 5 6 7 8 9)
+
+Since a single Clojure session underlies Babel, all blocks share the same environment:
+
+#+BEGIN_SRC clojure
+  (def A (range 10))
+#+END_SRC
+
+#+RESULTS:
+: #'user/A
+
+#+BEGIN_SRC clojure
+A
+#+END_SRC
+
+#+RESULTS:
+: (0 1 2 3 4 5 6 7 8 9)
+
+** COMMENT ClojureScript, Figwheel and Chestnut
+
+To start the Figwheel server:
+
+#+BEGIN_SRC clojure
+  (user/run)
+#+END_SRC
+
+#+RESULTS:
+: nil
+
+To switch from Clojure to ClojureScript:
+
+#+BEGIN_SRC clojure :results output verbatim
+  (user/browser-repl)
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+Launching ClojureScript REPL for build: app
+Figwheel Controls:
+          (stop-autobuild)                ;; stops Figwheel autobuilder
+          (start-autobuild [id ...])      ;; starts autobuilder focused on optional ids
+          (switch-to-build id ...)        ;; switches autobuilder to different build
+          (reset-autobuild)               ;; stops, cleans, and starts autobuilder
+          (reload-config)                 ;; reloads build config and resets autobuild
+          (build-once [id ...])           ;; builds source one time
+          (clean-builds [id ..])          ;; deletes compiled cljs target files
+          (print-config [id ...])         ;; prints out build configurations
+          (fig-status)                    ;; displays current state of system
+  Switch REPL build focus:
+          :cljs/quit                      ;; allows you to switch REPL to another build
+    Docs: (doc function-name-here)
+    Exit: Control+C or :cljs/quit
+ Results: Stored in vars *1, *2, *3, *e holds last exception object
+Prompt will show when Figwheel connects to your application
+To quit, type: :cljs/quit
+#+end_example
+
+Note: this requires a browser to be running and connected to ~http://localhost:3449~.
+
+And back:
+
+#+BEGIN_SRC clojure :results output silent
+:cljs/quit
+#+END_SRC
+
+To see which environment we're currently in:
+
+#+BEGIN_SRC clojure :results value verbatim
+  #? (:clj "Clojure" :cljs "ClojureScript")
+#+END_SRC
+
+#+RESULTS:
+: "Clojure"
+
+** Issues
+
+- There's a problem with the behaviour of ~org-mode-fontify~ (which decorates code blocks): temporary buffers are associated with files, causing bogus "save file" prompts. Following the link [[http://emacs.stackexchange.com/questions/20593/org-src-fontify-natively-makes-magit-think-there-are-unsaved-files][on StackExchange]], this seems to be a workround:
+
+#+BEGIN_SRC emacs-lisp
+  (defun kill-org-src-buffers (&rest args)
+    "Kill temporary buffers created by
+  org-src-font-lock-fontify-block so they don't interfere with
+  magit-mode."
+    (dolist (b (buffer-list))
+      (let ((bufname (buffer-name b)))
+        (if (string-prefix-p " org-src-fontification:" bufname)
+            (kill-buffer b)))))
+
+  (advice-add 'org-src-font-lock-fontify-block
+              :after #'kill-org-src-buffers)
+#+END_SRC
+
+- Clojure code blocks are not automatically associated with appropriate name spaces, so ~ns~ declarations need to be evaluated explicitly.
+
+- Evaluated code blocks won't carry accurate file names or line numbers, potentially making debugging tricky. The easiest workround is to frequently export to Clojure(Script) source files (via ~org-babel-tangle~, ~C-c C-v C-t~): for ClojureScript, Figwheel should recompile automatically, while for Clojure, get into a Clojure environment and reload via ~cider-load-file~, ~C-c C-l~. (~[[https://github.com/pyronicide/lein-autoreload][lein-autoreload]]~ might help.)

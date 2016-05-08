@@ -1,0 +1,16 @@
+-*- mode: org; mode: visual-line; -*-
+#+STARTUP: indent
+
+* JUNK
+:PROPERTIES:
+:header-args:clojure: :tangle core3.cljs
+:header-args:         :results value verbatim replace
+:END:
+
+#+BEGIN_SRC clojure
+  (ns thi-ng-geom-starter.core3)
+  (def B 23)
+#+END_SRC
+
+#+RESULTS:
+: #'thi-ng-geom-starter.core3/B
