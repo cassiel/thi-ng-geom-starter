@@ -154,4 +154,4 @@ To see which environment we're currently in:
 
 - Clojure code blocks are not automatically associated with appropriate name spaces, so ~ns~ declarations need to be evaluated explicitly.
 
-- Evaluated code blocks won't carry accurate file names or line numbers, potentially making debugging tricky. The easiest workround is to frequently export to Clojure(Script) source files (via ~org-babel-tangle~, ~C-c C-v C-t~): for ClojureScript, Figwheel should recompile automatically, while for Clojure, get into a Clojure environment and reload via ~cider-load-file~, ~C-c C-l~. (~[[https://github.com/pyronicide/lein-autoreload][lein-autoreload]]~ might help.)
+- Evaluated code blocks won't carry accurate file names or line numbers, potentially making debugging tricky. The easiest workround is to frequently export to Clojure(Script) source files (via ~org-babel-tangle~, ~C-c C-v C-t~): for ClojureScript, Figwheel should recompile automatically, while for Clojure, get into a Clojure environment and reload via ~cider-load-file~, ~C-c C-l~. ([[https://github.com/pyronicide/lein-autoreload][lein-autoreload]] might help.)
