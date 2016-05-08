@@ -49,11 +49,11 @@ Assuming you trust all the code in this repository, you can turn off confirmatio
   (setq org-confirm-babel-evaluate nil)
 #+END_SRC
 
-Testing Clojure
+** Testing Clojure
 
 Start a Clojure session in the usual way, via ~M-x cider-jack-in~.
 
-Here's a quick test. In this block, type ~C-c C-c~ to execute the code, or type ~C-c '~ to open a custom editor session for the block, with the usual Clojure editing tools.
+Here's a quick test. In this block, type ~C-c C-c~ to execute the code, or type <kbd>C-c '</kbd> to open a custom editor session for the block, with the usual Clojure editing tools.
 
 #+BEGIN_SRC clojure
   (range 10)
