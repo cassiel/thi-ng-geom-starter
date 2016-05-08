@@ -1,7 +1,7 @@
 -*- mode: org; mode: visual-line; -*-
 #+STARTUP: indent
 #+PROPERTY: header-args:emacs-lisp :results output silent
-#+PROPERTY: header-args:clojure :results value verbatim
+#+PROPERTY: header-args:clojure :results value verbatim replace
 
 * thi-ng-geom-starter
 ** Overview
@@ -132,7 +132,7 @@ To see which environment we're currently in:
 #+END_SRC
 
 #+RESULTS:
-: "Clojure"
+: "ClojureScript"
 
 ** Issues
 
@@ -152,6 +152,6 @@ To see which environment we're currently in:
               :after #'kill-org-src-buffers)
 #+END_SRC
 
-- Clojure code blocks are not automatically associated with appropriate name spaces, so ~ns~ declarations need to be evaluated explicitly.
+- Namespace handling is awkward. When working with pure Clojure or ClojureScript files, CIDER searches upwards for ~ns~ declarations to establish the correct namespace; in Org mode this doesn't work. Every org file will probably start off with a code block containing an ~ns~ declaration to do various ~:require~ and ~:refer~ calls, so as long as you evaluate this block first all should be fine. (Executing the ~ns~ seems to set the default namespace for the file buffer.) We also explicitly bind ~cider-buffer-ns~ in the (Emacs) variables for each file, useful if you visit a file for the first time after a session is already established. However, in ~edit-special~ (~C-c '~) sessions new buffers are established, and it's not clear how to set the default namespace for them. In the absence of some Emacs lisp-fu to make that work, we're currently forced to plan a single-line ~ns~ in every block.
 
-- Evaluated code blocks won't carry accurate file names or line numbers, potentially making debugging tricky. The easiest workround is to frequently export to Clojure(Script) source files (via ~org-babel-tangle~, ~C-c C-v C-t~): for ClojureScript, Figwheel should recompile automatically, while for Clojure, get into a Clojure environment and reload via ~cider-load-file~, ~C-c C-l~. ([[https://github.com/pyronicide/lein-autoreload][lein-autoreload]] might help.)
+- Evaluated code blocks won't carry accurate file names or line numbers, potentially making debugging tricky. (Same for old-fashioned ~C-M-x~ as well.) The easiest workround is to frequently export to Clojure(Script) source files (via ~org-babel-tangle~, ~C-c C-v C-t~): for ClojureScript, Figwheel should recompile automatically, while for Clojure, get into a Clojure environment and reload via ~cider-load-file~, ~C-c C-l~. ([[https://github.com/pyronicide/lein-autoreload][lein-autoreload]] might help.) *TODO*: for Clojure, see whether we can persuade Babyl to compile on export.

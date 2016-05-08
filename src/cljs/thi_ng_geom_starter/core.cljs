@@ -9,3 +9,6 @@
   [:h1 (:text @app-state)])
 
 (reagent/render [greeting] (js/document.getElementById "app"))
+
+(ns thi-ng-geom-starter.core)
+(reset! thi-ng-geom-starter.core/app-state {:text (namespace ::xxxx)})
