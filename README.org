@@ -53,7 +53,7 @@ Assuming you trust all the code in this repository, you can turn off confirmatio
 
 Start a Clojure session in the usual way, via ~M-x cider-jack-in~.
 
-Here's a quick test. In this block, type ~C-c C-c~ to execute the code, or type =C-c '= to open a custom editor session for the block, with the usual Clojure editing tools.
+Here's a quick test. In this block, type ~C-c C-c~ to execute the code, or type ~C-c \quot{}~ to open a custom editor session for the block, with the usual Clojure editing tools.
 
 #+BEGIN_SRC clojure
   (range 10)
