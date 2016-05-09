@@ -3,7 +3,7 @@
 #+PROPERTY: header-args:clojure  :tangle core.cljs
 #+PROPERTY: header-args:clojure+ :results value verbatim replace
 
-* Main Application
+* Core
 ** COMMENT Figwheel Core                                        :deprecated:
 
 Original code: this is lifted straight from the Figwheel/Chestnut template. Everything hangs off ~app~ in a small boilerplate ~index.html~.
@@ -24,16 +24,25 @@ Original code: this is lifted straight from the Figwheel/Chestnut template. Ever
 
 ** Figwheel Core (New with Canvas)
 
-Code lifted pretty much verbatim from [[https://github.com/thi-ng/ws-ldn-8/blob/master/day1/ex03/src/ex03/webgl03.cljs][webgl03]]. In our case we plant the canvas via Reagent.
+Code lifted pretty much verbatim from [[https://github.com/thi-ng/ws-ldn-8/blob/master/day1/ex03/src/ex03/webgl03.cljs][webgl03]], updated with the Reagent canvas pattern with ~:init~ and ~:loop~ callbacks (into ~main~, the actual application).
 
 #+BEGIN_SRC clojure
   (ns thi-ng-geom-starter.core
-    (:require [reagent.core :as reagent :refer [atom]]))
+    (:require [reagent.core :as reagent]
+              [thi-ng-geom-starter.canvas :as canvas]
+              [thi-ng-geom-starter.main :as main]))
 
   (enable-console-print!)
+
+  (defn app-component
+    []
+    [:div
+     [canvas/canvas-component {:init main/init-app
+                               :loop main/update-app}]
+     #_ [controls]])
 
   (defn canvas []
     [:canvas {:id "main" :width 1280 :height 720}])
 
-  (reagent/render [canvas] (js/document.getElementById "app"))
+  (reagent/render [app-component] (js/document.getElementById "app"))
 #+END_SRC

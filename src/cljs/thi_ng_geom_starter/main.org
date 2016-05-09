@@ -1,0 +1,25 @@
+-*- mode: org; mode: visual-line; cider-buffer-ns: "thi-ng-geom-starter.main" -*-
+#+STARTUP: indent
+#+PROPERTY: header-args:clojure  :tangle main.cljs
+#+PROPERTY: header-args:clojure+ :results value verbatim replace
+
+* Main Application
+
+Setup. ~update-app~ returns true/false depending whether Reagent has signalled that the component has been unmounted.
+
+#+BEGIN_SRC clojure
+  (ns thi-ng-geom-starter.main
+    (:require [reagent.core :as reagent]
+              [thi.ng.strf.core :as f]))
+
+  (defn init-app [this]
+    this)
+
+  (defn update-app [this]
+    (fn [t frame]
+      (js/console.log (f/format ["Still here, f=" f/int] frame))
+      (:active (reagent/state this))))
+#+END_SRC
+
+#+RESULTS:
+: nil

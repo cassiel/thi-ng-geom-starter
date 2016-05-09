@@ -1,9 +1,18 @@
 (ns thi-ng-geom-starter.core
-  (:require [reagent.core :as reagent :refer [atom]]))
+  (:require [reagent.core :as reagent]
+            [thi-ng-geom-starter.canvas :as canvas]
+            [thi-ng-geom-starter.main :as main]))
 
 (enable-console-print!)
+
+(defn app-component
+  []
+  [:div
+   [canvas/canvas-component {:init main/init-app
+                             :loop main/update-app}]
+   #_ [controls]])
 
 (defn canvas []
   [:canvas {:id "main" :width 1280 :height 720}])
 
-(reagent/render [canvas] (js/document.getElementById "app"))
+(reagent/render [app-component] (js/document.getElementById "app"))

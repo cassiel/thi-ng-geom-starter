@@ -6,6 +6,9 @@
 
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.clojure/clojurescript "1.8.40" :scope "provided"]
+                 [thi.ng/geom "0.0.1158-SNAPSHOT"]
+                 [thi.ng/domus "0.3.0-SNAPSHOT"]
+                 [thi.ng/strf "0.2.2"]
                  [ring "1.4.0"]
                  [ring/ring-defaults "0.2.0"]
                  [bk/ring-gzip "0.1.1"]

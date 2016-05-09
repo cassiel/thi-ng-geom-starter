@@ -1,0 +1,39 @@
+-*- mode: org; mode: visual-line; cider-buffer-ns: "thi-ng-geom-starter.canvas" -*-
+#+STARTUP: indent
+#+PROPERTY: header-args:clojure  :tangle canvas.cljs
+#+PROPERTY: header-args:clojure+ :results value verbatim replace
+
+* Canvas
+
+Lifted pretty much verbatim from [[https://medium.com/@thi.ng/workshop-report-hi-perf-clojurescript-with-webgl-asm-js-and-emscripten-a545cca083bc][the workshop write-up]]. (Gist [[https://gist.github.com/postspectacular/9de41cb7d9d6c4f264715b7d2fc966c0][here]].)
+
+#+BEGIN_SRC clojure
+  (ns thi-ng-geom-starter.canvas
+    (:require
+      [thi.ng.geom.gl.webgl.animator :as anim]
+      [reagent.core :as reagent]))
+
+  (defn canvas-component
+    [props]
+    (reagent/create-class
+     {:component-did-mount
+      (fn [this]
+        (reagent/set-state this {:active true})
+        ((:init props) this)
+        (anim/animate ((:loop props) this)))
+
+      :component-will-unmount
+      (fn [this]
+        (reagent/set-state this {:active false}))
+
+      :reagent-render
+      (fn [_]
+        [:canvas
+         (merge
+          {:width (.-innerWidth js/window)
+           :height (.-innerHeight js/window)}
+          props)])}))
+#+END_SRC
+
+#+RESULTS:
+: nil
