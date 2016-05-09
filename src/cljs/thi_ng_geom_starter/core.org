@@ -41,8 +41,5 @@ Code lifted pretty much verbatim from [[https://github.com/thi-ng/ws-ldn-8/blob/
                                :loop main/update-app}]
      #_ [controls]])
 
-  (defn canvas []
-    [:canvas {:id "main" :width 1280 :height 720}])
-
   (reagent/render [app-component] (js/document.getElementById "app"))
 #+END_SRC

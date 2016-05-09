@@ -11,9 +11,11 @@
       (reagent/set-state this {:active true})
       ((:init props) this)
       (anim/animate ((:loop props) this)))
+
     :component-will-unmount
     (fn [this]
       (reagent/set-state this {:active false}))
+
     :reagent-render
     (fn [_]
       [:canvas

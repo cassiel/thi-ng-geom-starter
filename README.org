@@ -137,7 +137,7 @@ To see which environment we're currently in:
 
 ** The Main Application
 
-See the [[file:src/cljs/thi_ng_geom_starter/core.org::*Main%20Application][main application]]. (That's a relative file link, not a URL.) This is the entry point for the Leiningen build. We (currently) have no Clojure source code at all - everything is ClojureScript.
+See the [[file:src/cljs/thi_ng_geom_starter/core.org][main application]]. (That's a relative file link, not a URL.) This is the entry point for the Leiningen build. We (currently) have no Clojure source code at all - everything is ClojureScript.
 
 ** Issues
 
