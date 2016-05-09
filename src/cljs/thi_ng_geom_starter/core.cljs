@@ -3,12 +3,7 @@
 
 (enable-console-print!)
 
-(defonce app-state (atom {:text "Hello Chestnut!"}))
+(defn canvas []
+  [:canvas {:id "main" :width 1280 :height 720}])
 
-(defn greeting []
-  [:h1 (:text @app-state)])
-
-(reagent/render [greeting] (js/document.getElementById "app"))
-
-(ns thi-ng-geom-starter.core)
-(reset! thi-ng-geom-starter.core/app-state {:text (namespace ::xxxx)})
+(reagent/render [canvas] (js/document.getElementById "app"))

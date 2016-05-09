@@ -2,6 +2,7 @@
 #+STARTUP: indent
 #+PROPERTY: header-args:emacs-lisp :results output silent
 #+PROPERTY: header-args:clojure :results value verbatim replace
+#+PROPERTY: header-args :exports none
 
 * thi-ng-geom-starter
 ** Overview
@@ -78,12 +79,12 @@ A
 #+RESULTS:
 : (0 1 2 3 4 5 6 7 8 9)
 
-** COMMENT ClojureScript, Figwheel and Chestnut
+** ClojureScript, Figwheel and Chestnut
 
 To start the Figwheel server:
 
 #+BEGIN_SRC clojure
-  (user/run)
+  (run)
 #+END_SRC
 
 #+RESULTS:
@@ -92,7 +93,7 @@ To start the Figwheel server:
 To switch from Clojure to ClojureScript:
 
 #+BEGIN_SRC clojure :results output verbatim
-  (user/browser-repl)
+  (browser-repl)
 #+END_SRC
 
 #+RESULTS:
@@ -134,6 +135,10 @@ To see which environment we're currently in:
 #+RESULTS:
 : "ClojureScript"
 
+** The Main Application
+
+See the [[file:src/cljs/thi_ng_geom_starter/core.org::*Main%20Application][main application]]. (That's a relative file link, not a URL.) This is the entry point for the Leiningen build. We (currently) have no Clojure source code at all - everything is ClojureScript.
+
 ** Issues
 
 - There's a problem with the behaviour of ~org-mode-fontify~ (which decorates code blocks): temporary buffers are associated with files, causing bogus "save file" prompts. Following the link [[http://emacs.stackexchange.com/questions/20593/org-src-fontify-natively-makes-magit-think-there-are-unsaved-files][on StackExchange]], this seems to be a workround:
@@ -152,6 +157,8 @@ To see which environment we're currently in:
               :after #'kill-org-src-buffers)
 #+END_SRC
 
-- Namespace handling is awkward. When working with pure Clojure or ClojureScript files, CIDER searches upwards for ~ns~ declarations to establish the correct namespace; in Org mode this doesn't work. Every org file will probably start off with a code block containing an ~ns~ declaration to do various ~:require~ and ~:refer~ calls, so as long as you evaluate this block first all should be fine. (Executing the ~ns~ seems to set the default namespace for the file buffer.) We also explicitly bind ~cider-buffer-ns~ in the (Emacs) variables for each file, useful if you visit a file for the first time after a session is already established. However, in ~edit-special~ (~C-c '~) sessions new buffers are established, and it's not clear how to set the default namespace for them. In the absence of some Emacs lisp-fu to make that work, we're currently forced to plan a single-line ~ns~ in every block.
+- Namespace handling is awkward. When working with pure Clojure or ClojureScript files, CIDER searches upwards for ~ns~ declarations to establish the correct namespace; in Org mode this doesn't work. Every org file will probably start off with a code block containing an ~ns~ declaration to do various ~:require~ and ~:refer~ calls, so as long as you evaluate this block first all should be fine. (Executing the ~ns~ seems to set the default namespace for the file buffer.) We also explicitly bind ~cider-buffer-ns~ in the (Emacs) variables for each file, useful if you visit a file for the first time after a session is already established. However, in ~edit-special~ (~C-c \acute{}~) sessions new buffers are established, and it's not clear how to set the default namespace for them. In the absence of some Emacs lisp-fu to make that work, we're currently forced to plant a single-line ~ns~ in every block.
 
 - Evaluated code blocks won't carry accurate file names or line numbers, potentially making debugging tricky. (Same for old-fashioned ~C-M-x~ as well.) The easiest workround is to frequently export to Clojure(Script) source files (via ~org-babel-tangle~, ~C-c C-v C-t~): for ClojureScript, Figwheel should recompile automatically, while for Clojure, get into a Clojure environment and reload via ~cider-load-file~, ~C-c C-l~. ([[https://github.com/pyronicide/lein-autoreload][lein-autoreload]] might help.) *TODO*: for Clojure, see whether we can persuade Babyl to compile on export.
+
+- Sorry about the ~acute{}~ business: there doesn't seem to be any way to format inline code containing isolated quotes.

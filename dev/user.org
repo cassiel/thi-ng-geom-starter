@@ -1,0 +1,36 @@
+-*- mode: org; mode: visual-line; cider-buffer-ns: "user" -*-
+#+STARTUP: indent
+#+PROPERTY: header-args:clojure  :tangle user.clj
+#+PROPERTY: header-args:clojure+ :results value verbatim replace
+
+* USER STARTUP
+
+This code gets loaded by Leiningen on launch, but doesn't make it into any deployment builds.
+
+Load up server and reloading support:
+
+#+BEGIN_SRC clojure
+  (ns user
+    (:require [thi-ng-geom-starter.server]
+              [ring.middleware.reload :refer [wrap-reload]]
+              [figwheel-sidecar.repl-api :as figwheel]))
+#+END_SRC
+
+Compiler settings: let Clojure warn you when it needs to reflect on types, or when it does math on unboxed numbers. In both cases you should add type annotations to prevent degraded performance.
+
+#+BEGIN_SRC clojure
+  (set! *warn-on-reflection* true)
+  (set! *unchecked-math* :warn-on-boxed)
+#+END_SRC
+
+Reloading, Figwheel launch, and switching to ClojureScript REPL:
+
+#+BEGIN_SRC clojure
+  (def http-handler
+    (wrap-reload #'thi-ng-geom-starter.server/http-handler))
+
+  (defn run []
+    (figwheel/start-figwheel!))
+
+  (def browser-repl figwheel/cljs-repl)
+#+END_SRC
