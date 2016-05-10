@@ -97,26 +97,6 @@ To switch from Clojure to ClojureScript:
 #+END_SRC
 
 #+RESULTS:
-#+begin_example
-Launching ClojureScript REPL for build: app
-Figwheel Controls:
-          (stop-autobuild)                ;; stops Figwheel autobuilder
-          (start-autobuild [id ...])      ;; starts autobuilder focused on optional ids
-          (switch-to-build id ...)        ;; switches autobuilder to different build
-          (reset-autobuild)               ;; stops, cleans, and starts autobuilder
-          (reload-config)                 ;; reloads build config and resets autobuild
-          (build-once [id ...])           ;; builds source one time
-          (clean-builds [id ..])          ;; deletes compiled cljs target files
-          (print-config [id ...])         ;; prints out build configurations
-          (fig-status)                    ;; displays current state of system
-  Switch REPL build focus:
-          :cljs/quit                      ;; allows you to switch REPL to another build
-    Docs: (doc function-name-here)
-    Exit: Control+C or :cljs/quit
- Results: Stored in vars *1, *2, *3, *e holds last exception object
-Prompt will show when Figwheel connects to your application
-To quit, type: :cljs/quit
-#+end_example
 
 Note: this requires a browser to be running and connected to ~http://localhost:3449~.
 

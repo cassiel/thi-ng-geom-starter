@@ -16,6 +16,8 @@
             [thi.ng.color.core :as col]
             [thi.ng.strf.core :as f]))
 
+(defonce app (atom {}))
+
 (defn init-app [this]
   (let [gl        (gl/gl-context "main")
         view-rect (gl/get-viewport-rect gl)
@@ -31,12 +33,22 @@
                       (cam/apply (cam/perspective-camera {:aspect view-rect}))
                       (assoc :shader (sh/make-shader-from-spec gl lambert/shader-spec-two-sided-attrib))
                       (gl/make-buffers-in-spec gl glc/static-draw))]
-    (assoc this
-           :gl gl
-           :view-rect view-rect
-           :model model)))
+    (reset! app {:gl gl
+                 :view-rect view-rect
+                 :model model})))
 
 (defn update-app [this]
   (fn [t frame]
-    (js/console.log (f/format ["Still here, f=" f/int] frame))
-    (:active (reagent/state this))))
+    (if-let [active (:active (reagent/state this))]
+      (do
+        (js/console.log (f/format ["Still here, f=" f/int] frame))
+
+        (let [{:keys [gl view-rect model]} @app]
+          (doto gl
+            (gl/set-viewport view-rect)
+            (gl/clear-color-and-depth-buffer col/GRAY 1)
+            (gl/draw-with-shader
+             (assoc-in model [:uniforms :model] (-> M44 (g/rotate-x t) (g/rotate-y (* t 2)))))))
+
+        true)
+      false)))

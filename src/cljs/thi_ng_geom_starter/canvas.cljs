@@ -18,7 +18,7 @@
 
     :reagent-render
     (fn [_]
-      [:canvas
+      [:canvas#main
        (merge
         {:width (.-innerWidth js/window)
          :height (.-innerHeight js/window)}

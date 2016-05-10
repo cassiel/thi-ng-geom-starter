@@ -28,7 +28,7 @@ Lifted pretty much verbatim from [[https://medium.com/@thi.ng/workshop-report-hi
 
       :reagent-render
       (fn [_]
-        [:canvas
+        [:canvas#main
          (merge
           {:width (.-innerWidth js/window)
            :height (.-innerHeight js/window)}
