@@ -50,6 +50,23 @@ Assuming you trust all the code in this repository, you can turn off confirmatio
   (setq org-confirm-babel-evaluate nil)
 #+END_SRC
 
+Since we'll be switching to/from sub-edit modes a lot, I sacrifice F12 to this:
+
+#+BEGIN_SRC emacs-lisp
+  (define-key org-mode-map (kbd "<f12>") 'org-edit-special)
+  (define-key org-src-mode-map (kbd "<f12>") 'org-edit-src-exit)
+#+END_SRC
+
+Also, a quick key for exporting via /tangle/:
+
+#+BEGIN_SRC emacs-lisp
+  (define-key org-mode-map (kbd "<M-f12>") 'org-babel-tangle)
+#+END_SRC
+
+*TODO*: those should be in the hooks for ~org-mode~ and ~org-src-mode~.
+
+(/Tangle/ does a save; since we can save while in sub-edit, perhaps a better way would be an ~after-save-hook~ to tangle on save, avoiding an infinite recursive loop if possible...)
+
 ** Testing Clojure
 
 Start a Clojure session in the usual way, via ~M-x cider-jack-in~.
@@ -97,6 +114,26 @@ To switch from Clojure to ClojureScript:
 #+END_SRC
 
 #+RESULTS:
+#+begin_example
+Launching ClojureScript REPL for build: app
+Figwheel Controls:
+          (stop-autobuild)                ;; stops Figwheel autobuilder
+          (start-autobuild [id ...])      ;; starts autobuilder focused on optional ids
+          (switch-to-build id ...)        ;; switches autobuilder to different build
+          (reset-autobuild)               ;; stops, cleans, and starts autobuilder
+          (reload-config)                 ;; reloads build config and resets autobuild
+          (build-once [id ...])           ;; builds source one time
+          (clean-builds [id ..])          ;; deletes compiled cljs target files
+          (print-config [id ...])         ;; prints out build configurations
+          (fig-status)                    ;; displays current state of system
+  Switch REPL build focus:
+          :cljs/quit                      ;; allows you to switch REPL to another build
+    Docs: (doc function-name-here)
+    Exit: Control+C or :cljs/quit
+ Results: Stored in vars *1, *2, *3, *e holds last exception object
+Prompt will show when Figwheel connects to your application
+To quit, type: :cljs/quit
+#+end_example
 
 Note: this requires a browser to be running and connected to ~http://localhost:3449~.
 
@@ -137,8 +174,10 @@ See the [[file:src/cljs/thi_ng_geom_starter/core.org][main application]]. (That'
               :after #'kill-org-src-buffers)
 #+END_SRC
 
-- Namespace handling is awkward. When working with pure Clojure or ClojureScript files, CIDER searches upwards for ~ns~ declarations to establish the correct namespace; in Org mode this doesn't work. Every org file will probably start off with a code block containing an ~ns~ declaration to do various ~:require~ and ~:refer~ calls, so as long as you evaluate this block first all should be fine. (Executing the ~ns~ seems to set the default namespace for the file buffer.) We also explicitly bind ~cider-buffer-ns~ in the (Emacs) variables for each file, useful if you visit a file for the first time after a session is already established. However, in ~edit-special~ (~C-c \acute{}~) sessions new buffers are established, and it's not clear how to set the default namespace for them. In the absence of some Emacs lisp-fu to make that work, we're currently forced to plant a single-line ~ns~ in every block.
+- Namespace handling is awkward. When working with pure Clojure or ClojureScript files, CIDER searches upwards for ~ns~ declarations to establish the correct namespace; in Org mode this doesn't work. Every org file will probably start off with a code block containing an ~ns~ declaration to do various ~:require~ and ~:refer~ calls, so as long as you evaluate this block first all should be fine. We explicitly bind ~cider-buffer-ns~ in the (Emacs) variables for each file, useful if you visit a file for the first time after a session is already established. A more serious problem is that in ~edit-special~ (~C-c \acute{}~) sessions new buffers are established, and it's not clear how to set the default namespace for them. We need some Emacs lisp-fu to make that work. (We can't just add an ~ns~ statement to each block, since on export the multiple statements will be rejected in ClojureScript.) So, for now, it's not possible to REPL-evaluate in sub-edit.
 
-- Evaluated code blocks won't carry accurate file names or line numbers, potentially making debugging tricky. (Same for old-fashioned ~C-M-x~ as well.) The easiest workround is to frequently export to Clojure(Script) source files (via ~org-babel-tangle~, ~C-c C-v C-t~): for ClojureScript, Figwheel should recompile automatically, while for Clojure, get into a Clojure environment and reload via ~cider-load-file~, ~C-c C-l~. ([[https://github.com/pyronicide/lein-autoreload][lein-autoreload]] might help.) *TODO*: for Clojure, see whether we can persuade Babyl to compile on export.
+- Evaluated source files won't carry line numbers that relate closely to code blocks, potentially making debugging a little tricky. (That's already true of REPL evaluation via ~C-M-x~.) I actually keep a second independent editor open on a second screen which auto-refreshes the exported code files, so that I can quickly eyeball what ClojureScript is seeing. (I've found [[http://brackets.io/][Brackets]] to work well.)
+
+- I'm a little in the dark on Clojure reloading - I generally use ~cider-load-file~ (~C-c C-l~ in Clojure mode). Again, perhaps that needs to be tied into /tangle/ exporting somehow. ([[https://github.com/pyronicide/lein-autoreload][lein-autoreload]] might help.)
 
 - Sorry about the ~acute{}~ business: there doesn't seem to be any way to format inline code containing isolated quotes.

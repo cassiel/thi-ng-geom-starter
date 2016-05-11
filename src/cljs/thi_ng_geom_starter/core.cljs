@@ -12,7 +12,4 @@
                              :loop main/update-app}]
    #_ [controls]])
 
-(defn canvas []
-  [:canvas {:id "main" :width 1280 :height 720}])
-
 (reagent/render [app-component] (js/document.getElementById "app"))
