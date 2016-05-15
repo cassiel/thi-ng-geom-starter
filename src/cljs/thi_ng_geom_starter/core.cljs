@@ -1,7 +1,8 @@
 (ns thi-ng-geom-starter.core
   (:require [reagent.core :as reagent]
             [thi-ng-geom-starter.canvas :as canvas]
-            [thi-ng-geom-starter.main :as main]))
+            [thi-ng-geom-starter.main :as main]
+            [thi-ng-geom-starter.knots :as knots]))
 
 (enable-console-print!)
 

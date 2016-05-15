@@ -30,10 +30,11 @@ Original code: this is lifted straight from the Figwheel/Chestnut template. Ever
 Code lifted pretty much verbatim from [[https://github.com/thi-ng/ws-ldn-8/blob/master/day1/ex03/src/ex03/webgl03.cljs][webgl03]], updated with the Reagent canvas pattern with ~:init~ and ~:loop~ callbacks (into ~main~, the actual application).
 
 #+BEGIN_SRC clojure
-(ns thi-ng-geom-starter.core
-  (:require [reagent.core :as reagent]
-            [thi-ng-geom-starter.canvas :as canvas]
-            [thi-ng-geom-starter.main :as main]))
+  (ns thi-ng-geom-starter.core
+    (:require [reagent.core :as reagent]
+              [thi-ng-geom-starter.canvas :as canvas]
+              [thi-ng-geom-starter.main :as main]
+              [thi-ng-geom-starter.knots :as knots]))
 #+END_SRC
 
 #+RESULTS:
@@ -48,7 +49,7 @@ Enable console printing:
 #+RESULTS:
 : nil
 
-Define the application component for Reagent. (Controls to come later.)
+Define the application component for Reagent. (Controls to come later.) Replace ~main~ by ~knots~ to see the knots demo code.
 
 #+BEGIN_SRC clojure
   (defn app-component
