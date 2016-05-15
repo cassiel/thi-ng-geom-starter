@@ -13,3 +13,4 @@
    #_ [controls]])
 
 (reagent/render [app-component] (js/document.getElementById "app"))
+(.addEventListener js/window "resize" canvas/on-window-resize)

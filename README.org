@@ -4,12 +4,20 @@
 #+PROPERTY: header-args:clojure :results value verbatim replace
 #+PROPERTY: header-args :exports none
 
-* thi-ng-geom-starter
-** Overview
+* Contents                                                        :TOC_2_org:
+ - [[Overview][Overview]]
+ - [[Setup][Setup]]
+ - [[Emacs Setup][Emacs Setup]]
+ - [[Testing Clojure][Testing Clojure]]
+ - [[ClojureScript, Figwheel and Chestnut][ClojureScript, Figwheel and Chestnut]]
+ - [[The Main Application][The Main Application]]
+ - [[Issues][Issues]]
+
+* Overview
 
 This is a test WebGL project using Karsten Schmidt's [[https://github.com/thi-ng][thi.ng]] tools for ClojureScript, written in a [[https://en.wikipedia.org/wiki/Literate_programming][literate programming]] style using [[https://www.gnu.org/software/emacs/][Emacs]], [[http://orgmode.org/][Org mode]] and [[http://orgmode.org/worg/org-contrib/babel/intro.html][Babel]].
 
-** Setup
+* Setup
 
 This project was created with
 
@@ -36,7 +44,7 @@ To get a fully functioning REPL for CIDER, I've added the following plugin depen
 - ~[cider/cider-nrepl "0.9.1"]~
 - ~[refactor-nrepl "1.1.0"]~
 
-** Emacs Setup
+* Emacs Setup
 
 We're using Sam Aaron's [[http://overtone.github.io/emacs-live/][Emacs Live]], which comes with support for Clojure (via [[https://github.com/clojure-emacs/cider][CIDER]]). Org-mode babel [[http://orgmode.org/worg/org-contrib/babel/languages/ob-doc-clojure.html][supports Clojure]], but this needs to be loaded via
 
@@ -65,9 +73,15 @@ Also, a quick key for exporting via /tangle/:
 
 *TODO*: those should be in the hooks for ~org-mode~ and ~org-src-mode~.
 
-(/Tangle/ does a save; since we can save while in sub-edit, perhaps a better way would be an ~after-save-hook~ to tangle on save, avoiding an infinite recursive loop if possible...)
+Nice-to-have: Org mode [[https://github.com/snosov1/toc-org][table of contents]]. Needs this hook:
 
-** Testing Clojure
+#+BEGIN_SRC emacs-lisp
+  (if (require 'toc-org nil t)
+      (add-hook 'org-mode-hook 'toc-org-enable)
+    (warn "toc-org not found"))
+#+END_SRC
+
+* Testing Clojure
 
 Start a Clojure session in the usual way, via ~M-x cider-jack-in~.
 
@@ -96,7 +110,7 @@ A
 #+RESULTS:
 : (0 1 2 3 4 5 6 7 8 9)
 
-** ClojureScript, Figwheel and Chestnut
+* ClojureScript, Figwheel and Chestnut
 
 To start the Figwheel server:
 
@@ -146,17 +160,18 @@ And back:
 To see which environment we're currently in:
 
 #+BEGIN_SRC clojure :results value verbatim
-  #? (:clj "Clojure" :cljs "ClojureScript")
+  #?(:clj  (str "Clojure @ " (java.util.Date.))
+     :cljs (str "ClojureScript @ " (js/Date.)))
 #+END_SRC
 
 #+RESULTS:
-: "ClojureScript"
+: "ClojureScript @ Sun May 15 2016 18:11:18 GMT+0100 (BST)"
 
-** The Main Application
+* The Main Application
 
-See the [[file:src/cljs/thi_ng_geom_starter/core.org][main application]]. (That's a relative file link, not a URL.) This is the entry point for the Leiningen build. We (currently) have no Clojure source code at all - everything is ClojureScript.
+See the [[file:src/cljs/thi_ng_geom_starter/core.org][main application]]. (That's a relative file link, not a URL.) This is the entry point for the Leiningen build. We (currently) have no server-side Clojure source code at all - everything is ClojureScript.
 
-** Issues
+* Issues
 
 - There's a problem with the behaviour of ~org-mode-fontify~ (which decorates code blocks): temporary buffers are associated with files, causing bogus "save file" prompts. Following the link [[http://emacs.stackexchange.com/questions/20593/org-src-fontify-natively-makes-magit-think-there-are-unsaved-files][on StackExchange]], this seems to be a workround:
 
@@ -176,8 +191,8 @@ See the [[file:src/cljs/thi_ng_geom_starter/core.org][main application]]. (That'
 
 - Namespace handling is awkward. When working with pure Clojure or ClojureScript files, CIDER searches upwards for ~ns~ declarations to establish the correct namespace; in Org mode this doesn't work. Every org file will probably start off with a code block containing an ~ns~ declaration to do various ~:require~ and ~:refer~ calls, so as long as you evaluate this block first all should be fine. We explicitly bind ~cider-buffer-ns~ in the (Emacs) variables for each file, useful if you visit a file for the first time after a session is already established. A more serious problem is that in ~edit-special~ (~C-c \acute{}~) sessions new buffers are established, and it's not clear how to set the default namespace for them. We need some Emacs lisp-fu to make that work. (We can't just add an ~ns~ statement to each block, since on export the multiple statements will be rejected in ClojureScript.) So, for now, it's not possible to REPL-evaluate in sub-edit.
 
-- Evaluated source files won't carry line numbers that relate closely to code blocks, potentially making debugging a little tricky. (That's already true of REPL evaluation via ~C-M-x~.) I actually keep a second independent editor open on a second screen which auto-refreshes the exported code files, so that I can quickly eyeball what ClojureScript is seeing. (I've found [[http://brackets.io/][Brackets]] to work well.)
+- Evaluated source files won't carry line numbers that relate closely to code blocks, potentially making debugging a little tricky. (That's already true of REPL evaluation via ~C-M-x~.) I actually keep a second independent editor open on a second screen which auto-refreshes the exported code files, so that I can quickly eyeball what Clojure(Script) is seeing. (I've found [[http://brackets.io/][Brackets]] to work well.)
 
-- I'm a little in the dark on Clojure reloading - I generally use ~cider-load-file~ (~C-c C-l~ in Clojure mode). Again, perhaps that needs to be tied into /tangle/ exporting somehow. ([[https://github.com/pyronicide/lein-autoreload][lein-autoreload]] might help.)
+- I'm a little in the dark on Clojure reloading - I generally use ~cider-load-file~ (~C-c C-l~ in Clojure mode) and/or follow [[http://thinkrelevance.com/blog/2013/06/04/clojure-workflow-reloaded][Stuart Sierra's workflow]]. Perhaps that needs to be tied into /tangle/ exporting somehow. ([[https://github.com/pyronicide/lein-autoreload][lein-autoreload]] might help.)
 
 - Sorry about the ~acute{}~ business: there doesn't seem to be any way to format inline code containing isolated quotes.

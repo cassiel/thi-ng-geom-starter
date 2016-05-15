@@ -3,8 +3,11 @@
 #+PROPERTY: header-args:clojure  :tangle core.cljs
 #+PROPERTY: header-args:clojure+ :results value verbatim replace
 
-* Core
-** COMMENT Figwheel Core                                        :deprecated:
+* Comtemts                                                        :TOC_2_org:
+ - [[COMMENT Figwheel Core][COMMENT Figwheel Core]]
+ - [[Figwheel Core (New with Canvas)][Figwheel Core (New with Canvas)]]
+
+* COMMENT Figwheel Core                                          :deprecated:
 
 Original code: this is lifted straight from the Figwheel/Chestnut template. Everything hangs off ~app~ in a small boilerplate ~index.html~.
 
@@ -22,32 +25,49 @@ Original code: this is lifted straight from the Figwheel/Chestnut template. Ever
   (reagent/render [greeting] (js/document.getElementById "app"))
 #+END_SRC
 
-** Figwheel Core (New with Canvas)
+* Figwheel Core (New with Canvas)
 
 Code lifted pretty much verbatim from [[https://github.com/thi-ng/ws-ldn-8/blob/master/day1/ex03/src/ex03/webgl03.cljs][webgl03]], updated with the Reagent canvas pattern with ~:init~ and ~:loop~ callbacks (into ~main~, the actual application).
 
 #+BEGIN_SRC clojure
-  (ns thi-ng-geom-starter.core
-    (:require [reagent.core :as reagent]
-              [thi-ng-geom-starter.canvas :as canvas]
-              [thi-ng-geom-starter.main :as main]))
+(ns thi-ng-geom-starter.core
+  (:require [reagent.core :as reagent]
+            [thi-ng-geom-starter.canvas :as canvas]
+            [thi-ng-geom-starter.main :as main]))
 #+END_SRC
 
 #+RESULTS:
 : nil
 
+Enable console printing:
+
 #+BEGIN_SRC clojure
   (enable-console-print!)
+#+END_SRC
 
+#+RESULTS:
+: nil
+
+Define the application component for Reagent. (Controls to come later.)
+
+#+BEGIN_SRC clojure
   (defn app-component
     []
     [:div
      [canvas/canvas-component {:init main/init-app
                                :loop main/update-app}]
      #_ [controls]])
-
-  (reagent/render [app-component] (js/document.getElementById "app"))
 #+END_SRC
 
 #+RESULTS:
-: nil
+: #'thi-ng-geom-starter.core/app-component
+
+Render component and add resize listener.
+
+#+BEGIN_SRC clojure
+  (reagent/render [app-component] (js/document.getElementById "app"))
+  (.addEventListener js/window "resize" canvas/on-window-resize)
+#+END_SRC
+
+#+RESULTS:
+: #object[Object [object Object]]
