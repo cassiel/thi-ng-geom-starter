@@ -10,7 +10,9 @@
    [thi.ng.geom.gl.shaders.basic :as basic]
    [thi.ng.geom.gl.shaders.phong :as phong]
    [thi.ng.geom.gl.glmesh :as glm]
+   [thi.ng.geom.basicmesh :as bm]
    [thi.ng.geom.gl.camera :as cam]
+   [thi.ng.geom.sphere    :refer [sphere]]
    [thi.ng.geom.core :as g]
    [thi.ng.geom.vector :as v :refer [vec2 vec3]]
    [thi.ng.geom.matrix :as mat :refer [M44]]
@@ -47,8 +49,10 @@
                 vec3 specular = Ks * beckmannSpecular(l, v, n, m);
                 vec3 att = lightCol / pow(length(vLightDir), lightAtt);
                 //vec3 diff = texture2D(tex, vUV).xyz;
-                vec3 diff = vec3(0.0);
-                //vec3 diff = vec3(0.1 * snoise(vPos0.xy * 10.0));
+                //vec3 diff = vec3(0.0);
+                //vec3 diff = vec3(0.1 * snoise(vUV * 20.0));
+                // I kind-of like tracking post-projection coordinates:
+                vec3 diff = vec3(0.1 * snoise(vPos.xy * 20.0));
                 //vec3 diff = vec3(mod(1.0 * vPos0.x * vPos0.y * 3.0, 1.0));
                 vec3 col = att * NdotL * ((1.0 - s) * diff + s * specular) + Ka * diff;
                 float fog = fogLinear(length(vPos), 1.0, 7.5);
@@ -81,11 +85,11 @@
               :vLightDir :vec3}
    :state    {:depth-test true}})
 
-(defn trajectoryR [t]
-  (let [mul 3
-        t (* t m/TWO_PI)]
-    (-> (v/vec3 (Math/cos t)  (Math.sin t) 0)
-        (g/scale mul))))
+(defn trajectory [radius]
+  (fn [t]
+    (let [t (* t m/TWO_PI)]
+      (-> (v/vec3 (Math/cos t)  (Math.sin t) 0)
+          (g/scale radius)))))
 
 (defn trajectory-curve [t]
   (cond
@@ -104,7 +108,7 @@
                     (Math/sin t)
                     0))))
 
-(defn trajectory [t]
+(defn trajectory-bend [t]
   (cond
     (< t (/ 1 2)) (m/mix (vec3 -1 -3 0)
                          (vec3 -1 1 0)
@@ -115,14 +119,14 @@
                  (* (- t (/ 1 2)) 2))))
 
 (defn ring-simple
-  []
-  (-> (mapv trajectory (butlast (m/norm-range 400)))
-      (ptf/sweep-mesh (g/vertices (c/circle 0.5) 40)
+  [radius]
+  (-> (mapv (trajectory radius) (butlast (m/norm-range 400)))
+      (ptf/sweep-mesh (g/vertices (c/circle (/ radius 10.0)) 40)
                       {:mesh    (glm/gl-mesh 32000 #{:fnorm :uv})
                        :attribs {:uv attr/uv-tube}
                        :align?  true
-                       :loop?   false
-                       :close?  false})))
+                       :loop?   true
+                       :close?  true})))
 
 (defn gradient-texture
   [gl w h opts]
@@ -149,7 +153,7 @@
   (debug "INIT")
   (let [gl          (gl/gl-context "main")
         view-rect   (gl/get-viewport-rect gl)
-        model       (-> (ring-simple)
+        model       (-> (ring-simple 3)
                         (gl/as-gl-buffer-spec {})
                         (assoc :shader (sh/make-shader-from-spec gl shader-spec))
                         (gl/make-buffers-in-spec gl glc/static-draw)
@@ -174,7 +178,7 @@
           (gl/draw-with-shader
            (-> model
                (cam/apply (cam/perspective-camera
-                           {:eye (vec3 0 0 3) :fov 90 :aspect view-rect}))
+                           {:eye (vec3 0 0 5) :fov 90 :aspect view-rect}))
                (update :uniforms assoc
                        :time t
                        :m (+ 0.21 (* 0.2 (Math/sin (* t 1))))
