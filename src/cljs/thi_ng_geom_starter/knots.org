@@ -14,6 +14,8 @@
 
 Practically all code here from [[https://github.com/thi-ng/ws-ldn-8/blob/master/day1/ex03/src/ex03/webgl05.cljs][webgl05]], although we've refactored the main entry point to fit in with the Reagent canvas boilerplate.
 
+*TODO* Resizing is currently broken: we set up the camera once, and in any case, [[file:canvas.org][canvas]] currently calls explicitly into [[file:main.org][main]] on resize event.
+
 #+BEGIN_SRC clojure
   (ns thi-ng-geom-starter.knots
     (:require
@@ -24,6 +26,7 @@ Practically all code here from [[https://github.com/thi-ng/ws-ldn-8/blob/master/
      [thi.ng.geom.gl.webgl.animator :as anim]
      [thi.ng.geom.gl.buffers :as buf]
      [thi.ng.geom.gl.shaders :as sh]
+     [thi.ng.geom.gl.shaders.phong :as phong]
      [thi.ng.geom.gl.glmesh :as glm]
      [thi.ng.geom.gl.camera :as cam]
      [thi.ng.geom.core :as g]
@@ -94,7 +97,7 @@ Practically all code here from [[https://github.com/thi-ng/ws-ldn-8/blob/master/
     [t]
     (let [t  (* t m/TWO_PI)
           pt (* 2.0 t)
-          qt (* 5.0 t)
+          qt (* 1.0 t)
           qc (+ 3.0 (Math/cos qt))]
       (v/vec3 (* qc (Math/cos pt)) (* qc (Math/sin pt)) (Math/sin qt))))
 
@@ -190,6 +193,7 @@ Practically all code here from [[https://github.com/thi-ng/ws-ldn-8/blob/master/
                           (cam/apply (cam/perspective-camera
                                       {:eye (vec3 0 0 5) :fov 90 :aspect view-rect}))
                           (assoc :shader (sh/make-shader-from-spec gl shader-spec))
+                          ;;(assoc :shader (sh/make-shader-from-spec gl phong/shader-spec))
                           (gl/make-buffers-in-spec gl glc/static-draw)
                           (time))
             [tcanv tex] (gradient-texture gl 4 1024 {:wrap [glc/clamp-to-edge glc/repeat]})]

@@ -1,0 +1,309 @@
+-*- mode: org; mode: visual-line; cider-buffer-ns: "thi-ng-geom-starter.rings" -*-
+#+STARTUP: indent
+#+PROPERTY: header-args:clojure  :tangle rings.cljs
+#+PROPERTY: header-args:clojure+ :results value verbatim replace
+
+* Contents                                                        :TOC_2_org:
+ - [[Links][Links]]
+ - [[Preamble][Preamble]]
+ - [[Shader Spec][Shader Spec]]
+   - [[COMMENT Debug][COMMENT Debug]]
+ - [[Geometry][Geometry]]
+   - [[COMMENT Debug][COMMENT Debug]]
+ - [[In-DOM Texture][In-DOM Texture]]
+ - [[Setup][Setup]]
+ - [[Loop][Loop]]
+
+* Links
+
+- [[https://github.com/thi-ng/shadergraph][shadergraph]] (~thi.ng.glsl~, for GLSL compositing, noise, ...)
+
+* Preamble
+
+#+BEGIN_SRC clojure
+  (ns thi-ng-geom-starter.rings
+    (:require
+     [reagent.core :as reagent]
+     [thi.ng.math.core :as m :refer [PI HALF_PI TWO_PI]]
+     [thi.ng.geom.gl.core :as gl]
+     [thi.ng.geom.gl.webgl.constants :as glc]
+     [thi.ng.geom.gl.webgl.animator :as anim]
+     [thi.ng.geom.gl.buffers :as buf]
+     [thi.ng.geom.gl.shaders :as sh]
+     [thi.ng.geom.gl.shaders.basic :as basic]
+     [thi.ng.geom.gl.shaders.phong :as phong]
+     [thi.ng.geom.gl.glmesh :as glm]
+     [thi.ng.geom.gl.camera :as cam]
+     [thi.ng.geom.core :as g]
+     [thi.ng.geom.vector :as v :refer [vec2 vec3]]
+     [thi.ng.geom.matrix :as mat :refer [M44]]
+     [thi.ng.geom.attribs :as attr]
+     [thi.ng.geom.circle :as c]
+     [thi.ng.geom.ptf :as ptf]
+     [thi.ng.glsl.core :as glsl :include-macros true]
+     [thi.ng.glsl.vertex :as vertex]
+     [thi.ng.glsl.lighting :as light]
+     [thi.ng.glsl.fog :as fog]
+     [thi.ng.glsl.noise :as noise]
+     [thi.ng.color.core :as col]
+     [thi.ng.color.gradients :as grad])
+    (:require-macros [cljs-log.core :refer [debug info warn severe]]))
+
+  (enable-console-print!)
+#+END_SRC
+
+#+RESULTS:
+: nil
+
+* Shader Spec
+
+Lifted from [[file:knots.org][knots]], then hacked around (playing with noise generators in particular).
+
+~vPos~ comes in as on-screen position (after view/model matrix). ~vPos0~ is on-model.
+
+#+BEGIN_SRC clojure
+  (def shader-spec
+    {:vs       (->> "void main() {
+                  vUV = uv + vec2(0, time * 0.025);
+                  vPos0 = position.xy;
+                  vPos = (view * model * vec4(position, 1.0)).xyz;
+                  vNormal = surfaceNormal(normal, normalMat);
+                  vLightDir = (view * vec4(lightPos, 1.0)).xyz - vPos;
+                  gl_Position = proj * vec4(vPos, 1.0);
+                }"
+                    (glsl/glsl-spec [vertex/surface-normal])
+                    (glsl/assemble))
+     :fs       (->> "void main() {
+                  vec3 n = normalize(vNormal);
+                  vec3 v = normalize(-vPos);
+                  vec3 l = normalize(vLightDir);
+                  float NdotL = max(0.0, dot(n, l));
+                  vec3 specular = Ks * beckmannSpecular(l, v, n, m);
+                  vec3 att = lightCol / pow(length(vLightDir), lightAtt);
+                  //vec3 diff = texture2D(tex, vUV).xyz;
+                  vec3 diff = vec3(0.0);
+                  //vec3 diff = vec3(0.1 * snoise(vPos0.xy * 10.0));
+                  //vec3 diff = vec3(mod(1.0 * vPos0.x * vPos0.y * 3.0, 1.0));
+                  vec3 col = att * NdotL * ((1.0 - s) * diff + s * specular) + Ka * diff;
+                  float fog = fogLinear(length(vPos), 1.0, 7.5);
+                  col = mix(col, Kf, fog);
+                  gl_FragColor = vec4(col, 1.0);
+                }"
+                    (glsl/glsl-spec [fog/fog-linear light/beckmann-specular noise/snoise])
+                    (glsl/assemble))
+     :uniforms {:model     :mat4
+                :view      :mat4
+                :proj      :mat4
+                :normalMat :mat4
+                :tex       :sampler2D
+                :Ks        [:vec3 [1 1 1]]
+                :Ka        [:vec3 [0.0 0.0 0.3]]
+                :Kf        [:vec3 ((juxt col/red col/green col/blue) col/GRAY)]
+                :m         [:float 0.9]
+                :s         [:float 0.1]
+                :lightCol  [:vec3 #_ [255 255 255] [200 80 40]]
+                :lightPos  [:vec3 [0 0 5]]
+                :lightAtt  [:float 3.0]
+                :time      :float}
+     :attribs  {:position :vec3
+                :normal   :vec3
+                :uv       :vec2}
+     :varying  {:vUV       :vec2
+                :vPos0     :vec2
+                :vPos      :vec3
+                :vNormal   :vec3
+                :vLightDir :vec3}
+     :state    {:depth-test true}})
+#+END_SRC
+
+#+RESULTS:
+: #'thi-ng-geom-starter.rings/shader-spec
+
+** COMMENT Debug
+
+#+BEGIN_SRC clojure
+((juxt col/red col/green col/blue) col/GRAY)
+#+END_SRC
+
+#+RESULTS:
+: [0.5 0.5 0.5]
+
+#+BEGIN_SRC clojure
+shader-spec
+
+#+END_SRC
+
+#+RESULTS:
+: {:vs "vec3 surfaceNormal(vec3 normal,mat4 normalMat){return normalize((normalMat*vec4(normal,.0)).xyz);}void main(){vUV=uv+vec2(0,time*.025);vPos=(view*model*vec4(position,1.)).xyz;vNormal=surfaceNormal(normal,normalMat);vLightDir=(view*vec4(lightPos,1.)).xyz-vPos;gl_Position=proj*vec4(vPos,1.);}", :fs "float beckmannDistribution(float x,float roughness){float NdotH=max(x,1e-4);float cos2Alpha=NdotH*NdotH;float tan2Alpha=(cos2Alpha-1.)/cos2Alpha;float roughness2=roughness*roughness;float denom=PI*roughness2*cos2Alpha*cos2Alpha;return exp(tan2Alpha/roughness2)/denom;}float beckmannSpecular(vec3 lightDirection,vec3 viewDirection,vec3 surfaceNormal,float roughness){return beckmannDistribution(dot(surfaceNormal,normalize(lightDirection+viewDirection)),roughness);}float fogLinear(float dist,float start,float end){return 1.-clamp((end-dist)/(end-start),.0,1.);}void main(){vec3 n=normalize(vNormal);vec3 v=normalize(-vPos);vec3 l=normalize(vLightDir);float NdotL=max(.0,dot(n,l));vec3 specular=Ks*beckmannSpecular(l,v,n,m);vec3 att=lightCol/pow(length(vLightDir),lightAtt);vec3 diff=texture2D(tex,vUV).xyz;vec3 col=att*NdotL*((1.-s)*diff+s*specular)+Ka*diff;gl_FragColor=vec4(col,1.);}", :uniforms {:Ka [:vec3 [0 0 0.3]], :lightAtt [:float 3], :tex :sampler2D, :m [:float 0.9], :lightPos [:vec3 [0 0 5]], :time :float, :Ks [:vec3 [1 1 1]], :normalMat :mat4, :Kf [:vec3 [0 0 0.1]], :s [:float 0.1], :proj :mat4, :lightCol [:vec3 [200 80 40]], :view :mat4, :model :mat4}, :attribs {:position :vec3, :normal :vec3, :uv :vec2}, :varying {:vUV :vec2, :vPos :vec3, :vNormal :vec3, :vLightDir :vec3}, :state {:depth-test true}}
+
+#+BEGIN_SRC clojure
+phong/shader-spec
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+{:vs "vec3 surfaceNormal(vec3 normal,mat4 normalMat){return normalize((normalMat*vec4(normal,.0)).xyz);}void main(){vec4 worldPos=model*vec4(position,1.);vec4 eyePos=view*worldPos;vEyePos=eyePos.xyz;vNormal=surfaceNormal(normal,normalMat);vLightPos=(view*vec4(lightPos,1.)).xyz;gl_Position=proj*eyePos;}", :fs "float blinnPhong(vec3 lightDir,vec3 eyeDir,vec3 surfaceNormal){return dot(normalize(lightDir+eyeDir),surfaceNormal);}float phong(vec3 lightDir,vec3 eyeDir,vec3 surfaceNormal){return dot(reflect(-lightDir,surfaceNormal),eyeDir);}\n#if __VERSION__>=300\nout vec4 fragColor;\n#endif\nvoid main(){vec3 L=normalize(vLightPos-vEyePos);vec3 E=normalize(-vEyePos);vec3 N=normalize(vNormal);float NdotL=max(.0,(dot(N,L)+wrap)/(1.+wrap));vec3 color=ambientCol+NdotL*diffuseCol;float specular=.0;if(useBlinnPhong){specular=blinnPhong(L,E,N);}else{specular=phong(L,E,N);}color+=max(pow(specular,shininess),.0)*specularCol;\n#if __VERSION__>=300\nfragColor=vec4(color,1.);\n#else\ngl_FragColor=vec4(color,1.);\n#endif\n}", :uniforms {:useBlinnPhong [:bool true], :wrap [:float 0], :lightPos [:vec3 [0 0 2]], :shininess [:float 32], :normalMat [:mat4 #object[Function "function (shader,uniforms){
+return thi.ng.geom.gl.core.compute_normal_matrix.call(null,(function (){var or__36182__auto__ = cljs.core.get.call(null,uniforms,model_id);
+if(cljs.core.truth_(or__36182__auto__)){
+return or__36182__auto__;
+} else {
+return cljs.core.get_in.call(null,shader,new cljs.core.PersistentVector(null, 3, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"uniforms","uniforms",-782808153),model_id,new cljs.core.Keyword(null,"default","default",-1987822328)], null));
+}
+})(),(function (){var or__36182__auto__ = cljs.core.get.call(null,uniforms,view_id);
+if(cljs.core.truth_(or__36182__auto__)){
+return or__36182__auto__;
+} else {
+return cljs.core.get_in.call(null,shader,new cljs.core.PersistentVector(null, 3, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"uniforms","uniforms",-782808153),view_id,new cljs.core.Keyword(null,"default","default",-1987822328)], null));
+}
+})());
+}"]], :specularCol [:vec3 [1 1 1]], :ambientCol [:vec3 [0 0 0]], :diffuseCol [:vec3 [0.8 0.8 0.8]], :proj :mat4, :view :mat4, :model [:mat4 #object[thi.ng.geom.matrix.Matrix44]]}, :attribs {:position [:vec3 0], :normal [:vec3 1]}, :varying {:vNormal :vec3, :vEyePos :vec3, :vLightPos :vec3}, :state {:depth-test true}}
+#+end_example
+
+* Geometry
+
+Simple X-Y ring (actually, ~c/circle~ could probably do this for us):
+
+#+BEGIN_SRC clojure
+  (defn trajectoryR [t]
+    (let [mul 3
+          t (* t m/TWO_PI)]
+      (-> (v/vec3 (Math/cos t)  (Math.sin t) 0)
+          (g/scale mul))))
+#+END_SRC
+
+#+RESULTS:
+: #'thi-ng-geom-starter.rings/trajectory
+
+Something a bit more complicated: attempt a bit of plumbing with straight and curved sections. (Turn off ~:close?~ in the sweeper.)
+
+#+BEGIN_SRC clojure
+  (defn trajectory-curve [t]
+    (cond
+      (< t (/ 1 3)) (m/mix (vec3 -1 -3 0)
+                           (vec3 -1 0 0)
+                           (* t 3))
+
+      (> t (/ 2 3)) (m/mix (vec3 0 1 0)
+                           (vec3 3 1 0)
+                           (* (- t (/ 2 3)) 3))
+
+      :else (let [t (* (- t (/ 1 3)) 3)
+                  t (* t m/TWO_PI)
+                  t (/ t 4)]
+              (vec3 (- (Math/cos t))
+                      (Math/sin t)
+                      0))))
+
+  (defn trajectory [t]
+    (cond
+      (< t (/ 1 2)) (m/mix (vec3 -1 -3 0)
+                           (vec3 -1 1 0)
+                           (* t 2))
+
+      :else (m/mix (vec3 1 1 0)
+                   (vec3 3 1 0)
+                   (* (- t (/ 1 2)) 2))))
+#+END_SRC
+
+
+PTF extrusion:
+
+#+BEGIN_SRC clojure
+  (defn ring-simple
+    []
+    (-> (mapv trajectory (butlast (m/norm-range 400)))
+        (ptf/sweep-mesh (g/vertices (c/circle 0.5) 40)
+                        {:mesh    (glm/gl-mesh 32000 #{:fnorm :uv})
+                         :attribs {:uv attr/uv-tube}
+                         :align?  true
+                         :loop?   false
+                         :close?  false})))
+#+END_SRC
+
+#+RESULTS:
+: #'thi-ng-geom-starter.rings/ring-simple
+
+** COMMENT Debug
+
+#+BEGIN_SRC clojure
+  ;;(-> (v/vec3 1 2 3) (g/scale 4))
+  ;;  (m/mix (v/vec3 1 2 3) (v/vec3 10 20 30) 0.7)
+  (js/alert (v/vec3 1 2 3))
+  ;;(js/alert  [1 2 3])
+
+
+  ;;(js/alert "A")
+#+END_SRC
+
+#+RESULTS:
+
+* In-DOM Texture
+
+#+BEGIN_SRC clojure
+  (defn gradient-texture
+    [gl w h opts]
+    (let [canv (.createElement js/document "canvas")
+          ctx  (.getContext canv "2d")
+          cols (apply grad/cosine-gradient h (:rainbow1 grad/cosine-schemes))]
+      (set! (.-width canv) w)
+      (set! (.-height canv) h)
+      (set! (.-strokeStyle ctx) "none")
+      (loop [y 0, cols cols]
+        (if cols
+          (let [c (first cols)
+                c (if (< (mod y 16) 8)
+                    (col/adjust-brightness c -0.75)
+                    c)]
+            (set! (.-fillStyle ctx) @(col/as-css c))
+            (.fillRect ctx 0 y w 1)
+            (recur (inc y) (next cols)))
+          [canv (buf/make-canvas-texture gl canv opts)]))))
+#+END_SRC
+
+* Setup
+
+#+BEGIN_SRC clojure
+  (defonce app (reagent/atom {}))
+
+  (defn init-app [_]
+    (debug "INIT")
+    (let [gl          (gl/gl-context "main")
+          view-rect   (gl/get-viewport-rect gl)
+          model       (-> (ring-simple)
+                          (gl/as-gl-buffer-spec {})
+                          (assoc :shader (sh/make-shader-from-spec gl shader-spec))
+                          (gl/make-buffers-in-spec gl glc/static-draw)
+                          (time))
+          [tcanv tex] (gradient-texture gl 4 1024 {:wrap [glc/clamp-to-edge glc/repeat]})]
+      (reset! app {:gl        gl
+                   :view-rect view-rect
+                   :model     model
+                   :tcanv     tcanv
+                   :tex       tex})
+      (.appendChild (.-body js/document) tcanv)))
+#+END_SRC
+
+* Loop
+
+#+BEGIN_SRC clojure
+  (defn update-app [this]
+    (fn [t frame]
+      (when (:active (reagent/state this))
+        (let [{:keys [gl view-rect model tex]} @app]
+          (gl/bind tex 0)
+          (doto gl
+            (gl/set-viewport view-rect)
+            (gl/clear-color-and-depth-buffer col/GRAY 1)
+
+            (gl/draw-with-shader
+             (-> model
+                 (cam/apply (cam/perspective-camera
+                             {:eye (vec3 0 0 3) :fov 90 :aspect view-rect}))
+                 (update :uniforms assoc
+                         :time t
+                         :m (+ 0.21 (* 0.2 (Math/sin (* t 1))))
+                         :model (-> M44 (g/rotate-x (* t 0.1)) (g/rotate-y (* t 0.1))))
+                         (gl/inject-normal-matrix :model :view :normalMat)
+                 ))))
+        true)))
+#+END_SRC

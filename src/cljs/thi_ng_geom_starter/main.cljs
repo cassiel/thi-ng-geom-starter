@@ -70,34 +70,17 @@
       :else
       (set-stream-state! :unavailable))))
 
-(def shader-spec
-  {:vs "void main() {
-    vUV = uv;
-    gl_Position = proj * view * model * vec4(position, 1.0);
-    }"
-   :fs "void main() {
-    gl_FragColor = texture2D(tex, vUV);
-    }"
-   :uniforms {:model    [:mat4 M44]
-              :view     :mat4
-              :proj     :mat4
-              :tex      :sampler2D}
-   :attribs  {:position :vec3
-              :uv       :vec2}
-   :varying  {:vUV      :vec2}
-   :state    {:depth-test false
-              :blend      true
-              :blend-fn   [glc/src-alpha glc/one]}})
-
 (defn make-model [gl]
-  (-> (a/aabb 1)
+  (-> (a/aabb 0.8)
       (g/center)
       (g/as-mesh
-       {:mesh    (glm/indexed-gl-mesh 12 #{:uv})
-        ;;:flags   :nsb
-        :attribs {:uv (attr/face-attribs (attr/uv-cube-map-v 256 false))}})
+       {:mesh    (glm/indexed-gl-mesh 12 #{:col :fnorm})
+        ;;:flags   :ewfbs
+        :attribs {:col (->> [[1 0 0] [0 1 0] [0 0 1] [0 1 1] [1 0 1] [1 1 0]]
+                            (map col/rgba)
+                            (attr/const-face-attribs))}})
       (gl/as-gl-buffer-spec {})
-      (assoc :shader (sh/make-shader-from-spec gl shader-spec))
+      (assoc :shader (sh/make-shader-from-spec gl lambert/shader-spec-two-sided-attrib))
       (gl/make-buffers-in-spec gl glc/static-draw)))
 
 (defn rebuild-viewport [app]

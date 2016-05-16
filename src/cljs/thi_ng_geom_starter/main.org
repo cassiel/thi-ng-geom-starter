@@ -8,8 +8,8 @@
    - [[Geom][Geom]]
  - [[Setup][Setup]]
  - [[Stream Setup][Stream Setup]]
- - [[COMMENT Model: Colour-Face Lighting Cube][COMMENT Model: Colour-Face Lighting Cube]]
- - [[Model: Texture-Mapped Cube][Model: Texture-Mapped Cube]]
+ - [[Model: Colour-Face Lighting Cube][Model: Colour-Face Lighting Cube]]
+ - [[COMMENT Model: Texture-Mapped Cube][COMMENT Model: Texture-Mapped Cube]]
    - [[Shader][Shader]]
    - [[Model][Model]]
  - [[Viewport Machinery][Viewport Machinery]]
@@ -128,7 +128,7 @@ Stream initialisation. This appears to kick off a hidden video player anchored t
         (set-stream-state! :unavailable))))
 #+END_SRC
 
-* COMMENT Model: Colour-Face Lighting Cube
+* Model: Colour-Face Lighting Cube
 
 Create model. We don't link in the camera here, but instead bind that in the update loop, to accomodate window resizing.
 
@@ -147,7 +147,7 @@ Create model. We don't link in the camera here, but instead bind that in the upd
         (gl/make-buffers-in-spec gl glc/static-draw)))
 #+END_SRC
 
-* Model: Texture-Mapped Cube
+* COMMENT Model: Texture-Mapped Cube
 ** Shader
 
 Pretty generic texture mapping.
@@ -337,7 +337,7 @@ Animation loop. ~update-app~ returns truthy/falsey depending whether Reagent has
                (-> (:cube scene)
                    (cam/apply
                     (cam/perspective-camera
-                     {:eye (vec3 0 0 1.25) :fov 90 :aspect view}))
+                     {:eye (vec3 0 0 0.25) :fov 90 :aspect view}))
                    (assoc-in [:uniforms :model] (-> M44 (g/rotate-x t) (g/rotate-y (* t 2)))))))))
         (:active (reagent/state this)))))
 #+END_SRC

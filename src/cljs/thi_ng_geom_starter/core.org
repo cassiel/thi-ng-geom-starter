@@ -34,7 +34,8 @@ Code lifted pretty much verbatim from [[https://github.com/thi-ng/ws-ldn-8/blob/
     (:require [reagent.core :as reagent]
               [thi-ng-geom-starter.canvas :as canvas]
               [thi-ng-geom-starter.main :as main]
-              [thi-ng-geom-starter.knots :as knots]))
+              [thi-ng-geom-starter.knots :as knots]
+              [thi-ng-geom-starter.rings :as rings]))
 #+END_SRC
 
 #+RESULTS:
@@ -55,8 +56,8 @@ Define the application component for Reagent. (Controls to come later.) Replace 
   (defn app-component
     []
     [:div
-     [canvas/canvas-component {:init main/init-app
-                               :loop main/update-app}]
+     [canvas/canvas-component {:init rings/init-app
+                               :loop rings/update-app}]
      #_ [controls]])
 #+END_SRC
 
