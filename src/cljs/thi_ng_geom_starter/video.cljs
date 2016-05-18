@@ -55,8 +55,9 @@
 
 (defn init-rtc-stream [w h]
   (let [video (dom/create-dom!
-               [:video {:width w :height h :hidden true :autoplay true}]
-               (.-body js/document))]
+               [:video {:width w :height h :hidden false :autoplay true}]
+               (.-body js/document))
+        ]
     (cond
       (aget js/navigator "webkitGetUserMedia")
       (.webkitGetUserMedia js/navigator #js {:video true}
@@ -91,15 +92,12 @@
               :blend-fn   [glc/src-alpha glc/one]}})
 
 (defn make-model [gl]
-  (-> #_ (a/aabb 1)
-      (p/plane [0 0 0] 1)
+  (-> (p/plane [0 0 0] 1)
       (g/center)
-      #_ (g/as-mesh {:mesh    (glm/indexed-gl-mesh 12 #{:uv})
-                     :attribs {:uv attr/uv-faces}})
       (g/as-mesh {:mesh (glm/gl-mesh 2 #{:uv})
                   :attribs {:uv attr/uv-faces}})
       (gl/as-gl-buffer-spec {})
-      (assoc :shader (sh/make-shader-from-spec gl shaders/cube-shader-spec #_ shader-spec))
+      (assoc :shader (sh/make-shader-from-spec gl shader-spec))
       (gl/make-buffers-in-spec gl glc/static-draw)))
 
 (defn rebuild-viewport [app]
@@ -142,7 +140,7 @@
                           :pixelate  pixelate}
             :scene       {:fbo     fbo
                           :fbo-tex fbo-tex
-                          :cube    (make-model gl)
+                          :model   (make-model gl)
                           :img     (-> (fx/init-fx-quad gl)
                                        #_(assoc :shader thresh))}})
     (init-rtc-stream vw vh)))
@@ -167,13 +165,13 @@
                (assoc-in [:uniforms :time] t)
                (assoc :shader (shaders curr-shader)))))
         (when try-it (gl/unbind (:fbo scene)))
-        ;; render cube to main canvas
+        ;; render model to main canvas
         (when try-it
           (gl/bind (:fbo-tex scene) 0)
           (doto gl
             (gl/set-viewport view)
             (gl/draw-with-shader
-             (-> (:cube scene)
+             (-> (:model scene)
                  (cam/apply
                   (cam/perspective-camera
                    {:eye (vec3 0 0 1.0) :fov 90 :aspect view}))

@@ -9,7 +9,7 @@
    - [[Other][Other]]
  - [[Namespaces][Namespaces]]
  - [[Stream Setup][Stream Setup]]
- - [[Model: Texture-Mapped Cube][Model: Texture-Mapped Cube]]
+ - [[Model: Plane][Model: Plane]]
    - [[Shader][Shader]]
    - [[Model][Model]]
  - [[Viewport Machinery][Viewport Machinery]]
@@ -112,29 +112,30 @@ Activate the RTC stream.
 Stream initialisation. This appears to kick off a hidden video player anchored to the document body.
 
 #+BEGIN_SRC clojure
-  (defn init-rtc-stream [w h]
-    (let [video (dom/create-dom!
-                 [:video {:width w :height h :hidden true :autoplay true}]
-                 (.-body js/document))]
-      (cond
-        (aget js/navigator "webkitGetUserMedia")
-        (.webkitGetUserMedia js/navigator #js {:video true}
-                             #(activate-rtc-stream video %)
-                             #(set-stream-state! :forbidden))
+   (defn init-rtc-stream [w h]
+     (let [video (dom/create-dom!
+                  [:video {:width w :height h :hidden false :autoplay true}]
+                  (.-body js/document))
+           ]
+       (cond
+         (aget js/navigator "webkitGetUserMedia")
+         (.webkitGetUserMedia js/navigator #js {:video true}
+                              #(activate-rtc-stream video %)
+                              #(set-stream-state! :forbidden))
 
-        (aget js/navigator "mozGetUserMedia")
-        (.mozGetUserMedia js/navigator #js {:video true}
-                          #(activate-rtc-stream video %)
-                          #(set-stream-state! :forbidden))
+         (aget js/navigator "mozGetUserMedia")
+         (.mozGetUserMedia js/navigator #js {:video true}
+                           #(activate-rtc-stream video %)
+                           #(set-stream-state! :forbidden))
 
-        :else
-        (set-stream-state! :unavailable))))
+         :else
+         (set-stream-state! :unavailable))))
 #+END_SRC
 
-* Model: Texture-Mapped Cube
+* Model: Plane
 ** Shader
 
-Pretty generic texture mapping.
+Pretty generic texture mapping, give ~UV~ pass-through.
 
 #+BEGIN_SRC clojure
   (def shader-spec
@@ -159,17 +160,16 @@ Pretty generic texture mapping.
 
 ** Model
 
+Based on [[file:main.org::*Model:%20Colour-Face%20Lighting%20Cube][main/Model: Colour-Face Lighting Cube]]. We don't need an indexed mesh. Num faces is 2 (post-tesselation). ~attr/uv-faces~ is part of the cube generator but works fine as a generic rectangular face mapping (see [[https://github.com/thi-ng/geom/blob/develop/src/types/attribs.org][attribs]]).
+
 #+BEGIN_SRC clojure
   (defn make-model [gl]
-    (-> #_ (a/aabb 1)
-        (p/plane [0 0 0] 1)
+    (-> (p/plane [0 0 0] 1)
         (g/center)
-        #_ (g/as-mesh {:mesh    (glm/indexed-gl-mesh 12 #{:uv})
-                       :attribs {:uv attr/uv-faces}})
         (g/as-mesh {:mesh (glm/gl-mesh 2 #{:uv})
                     :attribs {:uv attr/uv-faces}})
         (gl/as-gl-buffer-spec {})
-        (assoc :shader (sh/make-shader-from-spec gl shaders/cube-shader-spec #_ shader-spec))
+        (assoc :shader (sh/make-shader-from-spec gl shader-spec))
         (gl/make-buffers-in-spec gl glc/static-draw)))
 #+END_SRC
 
@@ -226,7 +226,7 @@ Setup. Generate a GL context (from DOM element ~main~), viewport rectangle and m
                             :pixelate  pixelate}
               :scene       {:fbo     fbo
                             :fbo-tex fbo-tex
-                            :cube    (make-model gl)
+                            :model   (make-model gl)
                             :img     (-> (fx/init-fx-quad gl)
                                          #_(assoc :shader thresh))}})
       (init-rtc-stream vw vh)))
@@ -255,13 +255,13 @@ Setup. Generate a GL context (from DOM element ~main~), viewport rectangle and m
                  (assoc-in [:uniforms :time] t)
                  (assoc :shader (shaders curr-shader)))))
           (when try-it (gl/unbind (:fbo scene)))
-          ;; render cube to main canvas
+          ;; render model to main canvas
           (when try-it
             (gl/bind (:fbo-tex scene) 0)
             (doto gl
               (gl/set-viewport view)
               (gl/draw-with-shader
-               (-> (:cube scene)
+               (-> (:model scene)
                    (cam/apply
                     (cam/perspective-camera
                      {:eye (vec3 0 0 1.0) :fov 90 :aspect view}))
