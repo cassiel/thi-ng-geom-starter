@@ -91,10 +91,12 @@
               :blend-fn   [glc/src-alpha glc/one]}})
 
 (defn make-model [gl]
-  (-> (a/aabb 1)
-      #_ (p/plane [0 0 0] 1)
+  (-> #_ (a/aabb 1)
+      (p/plane [0 0 0] 1)
       (g/center)
-      (g/as-mesh {:mesh    (glm/indexed-gl-mesh 12 #{:uv})
+      #_ (g/as-mesh {:mesh    (glm/indexed-gl-mesh 12 #{:uv})
+                     :attribs {:uv attr/uv-faces}})
+      (g/as-mesh {:mesh (glm/gl-mesh 2 #{:uv})
                   :attribs {:uv attr/uv-faces}})
       (gl/as-gl-buffer-spec {})
       (assoc :shader (sh/make-shader-from-spec gl shaders/cube-shader-spec #_ shader-spec))
@@ -174,6 +176,6 @@
              (-> (:cube scene)
                  (cam/apply
                   (cam/perspective-camera
-                   {:eye (vec3 0 0 1.25) :fov 90 :aspect view}))
+                   {:eye (vec3 0 0 1.0) :fov 90 :aspect view}))
                  (assoc-in [:uniforms :model] (-> M44 (g/rotate-x t) (g/rotate-y (* t 2)))))))))
       (:active (reagent/state this)))))
