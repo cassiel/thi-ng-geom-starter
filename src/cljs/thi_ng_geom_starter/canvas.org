@@ -43,6 +43,8 @@ Window resize event handler (see [[file:core.org][core]]):
 
 Reagent component. The render function has a watch on ~window-size~ to rebuild the view port.
 
+*TODO*: This component refers to ~main/~ although we have other namespaces with demo code. Accordingly, resizing doesn't work for all of them.
+
 #+BEGIN_SRC clojure
   (defn canvas-component
     [props]
@@ -56,8 +58,7 @@ Reagent component. The render function has a watch on ~window-size~ to rebuild t
       :component-did-update
       (fn [this]
         (debug "UPDATE")
-        (swap! main/app main/rebuild-viewport)
-        )
+        ((:update props) this))
 
       :component-will-unmount
       (fn [this]

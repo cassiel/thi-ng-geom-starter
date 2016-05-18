@@ -147,6 +147,15 @@
           (recur (inc y) (next cols)))
         [canv (buf/make-canvas-texture gl canv opts)]))))
 
+(defn rebuild-viewport [app]
+  (let [gl (:gl app)
+        _  (gl/set-viewport gl {:p [0 0] :size [(.-innerWidth js/window) (.-innerHeight js/window)]})
+        vr (gl/get-viewport-rect gl)]
+    (assoc app
+           :view-rect vr
+           ;; :model (make-model gl vr)
+           )))
+
 (defonce app (reagent/atom {}))
 
 (defn init-app [_]

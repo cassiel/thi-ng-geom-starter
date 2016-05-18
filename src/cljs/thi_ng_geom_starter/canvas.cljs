@@ -22,8 +22,7 @@
     :component-did-update
     (fn [this]
       (debug "UPDATE")
-      (swap! main/app main/rebuild-viewport)
-      )
+      ((:update props) this))
 
     :component-will-unmount
     (fn [this]

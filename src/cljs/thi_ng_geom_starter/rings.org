@@ -11,6 +11,7 @@
  - [[Geometry][Geometry]]
    - [[COMMENT Debug][COMMENT Debug]]
  - [[In-DOM Texture][In-DOM Texture]]
+ - [[Viewport Machinery][Viewport Machinery]]
  - [[Setup][Setup]]
  - [[Loop][Loop]]
 
@@ -262,6 +263,22 @@ PTF extrusion:
             (.fillRect ctx 0 y w 1)
             (recur (inc y) (next cols)))
           [canv (buf/make-canvas-texture gl canv opts)]))))
+#+END_SRC
+
+* Viewport Machinery
+
+See  [[file:main.org::*Viewport%20Machinery][main::Viewport Machinery]].
+
+#+BEGIN_SRC clojure
+  (defn rebuild-viewport [app]
+    (let [gl (:gl app)
+          _  (gl/set-viewport gl {:p [0 0] :size [(.-innerWidth js/window) (.-innerHeight js/window)]})
+          vr (gl/get-viewport-rect gl)]
+      (assoc app
+             :view-rect vr
+             ;; :model (make-model gl vr)
+             )))
+
 #+END_SRC
 
 * Setup

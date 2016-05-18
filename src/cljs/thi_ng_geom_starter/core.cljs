@@ -11,7 +11,9 @@
   []
   [:div
    [canvas/canvas-component {:init rings/init-app
-                             :loop rings/update-app}]
+                             :loop rings/update-app
+                             :update #(swap! rings/app rings/rebuild-viewport)}
+                             ]
    #_ [controls]])
 
 (reagent/render [app-component] (js/document.getElementById "app"))

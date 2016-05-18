@@ -53,12 +53,14 @@ Enable console printing:
 Define the application component for Reagent. (Controls to come later.) Replace ~main~ by ~knots~ to see the knots demo code.
 
 #+BEGIN_SRC clojure
-  (defn app-component
-    []
-    [:div
-     [canvas/canvas-component {:init rings/init-app
-                               :loop rings/update-app}]
-     #_ [controls]])
+    (defn app-component
+      []
+      [:div
+       [canvas/canvas-component {:init rings/init-app
+                                 :loop rings/update-app
+                                 :update #(swap! rings/app rings/rebuild-viewport)}
+                                 ]
+       #_ [controls]])
 #+END_SRC
 
 #+RESULTS:

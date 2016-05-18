@@ -124,7 +124,7 @@ To start the Figwheel server:
 To switch from Clojure to ClojureScript:
 
 #+BEGIN_SRC clojure :results output verbatim
-  (browser-repl)
+  (repl-browser)
 #+END_SRC
 
 #+RESULTS:
@@ -165,7 +165,7 @@ To see which environment we're currently in:
 #+END_SRC
 
 #+RESULTS:
-: "ClojureScript @ Mon May 16 2016 20:38:08 GMT+0100 (BST)"
+: "ClojureScript @ Wed May 18 2016 11:02:47 GMT+0100 (BST)"
 
 * The Main Application
 
