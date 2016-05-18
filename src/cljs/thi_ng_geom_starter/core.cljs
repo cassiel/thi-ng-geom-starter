@@ -3,16 +3,18 @@
             [thi-ng-geom-starter.canvas :as canvas]
             [thi-ng-geom-starter.main :as main]
             [thi-ng-geom-starter.knots :as knots]
-            [thi-ng-geom-starter.rings :as rings]))
+            [thi-ng-geom-starter.rings :as rings]
+            [thi-ng-geom-starter.video :as video]
+            ))
 
 (enable-console-print!)
 
 (defn app-component
   []
   [:div
-   [canvas/canvas-component {:init rings/init-app
-                             :loop rings/update-app
-                             :update #(swap! rings/app rings/rebuild-viewport)}
+   [canvas/canvas-component {:init video/init-app
+                             :loop video/update-app
+                             :update #(swap! video/app video/rebuild-viewport)}
                              ]
    #_ [controls]])
 

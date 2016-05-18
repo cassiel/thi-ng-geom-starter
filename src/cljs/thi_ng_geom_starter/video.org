@@ -1,31 +1,35 @@
--*- mode: org; mode: visual-line; cider-buffer-ns: "thi-ng-geom-starter.main" -*-
+-*- mode: org; mode: visual-line; cider-buffer-ns: "thi-ng-geom-starter.video" -*-
 #+STARTUP: indent
-#+PROPERTY: header-args:clojure  :tangle main.cljs
+#+PROPERTY: header-args:clojure  :tangle video.cljs
 #+PROPERTY: header-args:clojure+ :results value verbatim replace
 
 * Contents                                                          :TOC_2_org:
- - [[Links][Links]]
+ - [[Reference][Reference]]
    - [[Geom][Geom]]
- - [[Setup][Setup]]
+   - [[Other][Other]]
+ - [[Namespaces][Namespaces]]
  - [[Stream Setup][Stream Setup]]
- - [[Model: Colour-Face Lighting Cube][Model: Colour-Face Lighting Cube]]
- - [[COMMENT Model: Texture-Mapped Cube][COMMENT Model: Texture-Mapped Cube]]
+ - [[Model: Texture-Mapped Cube][Model: Texture-Mapped Cube]]
    - [[Shader][Shader]]
    - [[Model][Model]]
  - [[Viewport Machinery][Viewport Machinery]]
- - [[Setup (File Texture Version)][Setup (File Texture Version)]]
- - [[Loop (File Texture Version)][Loop (File Texture Version)]]
+ - [[Setup][Setup]]
+ - [[Loop (Video Version)][Loop (Video Version)]]
 
-* Links
+* Reference
 ** Geom
 
 - [[https://github.com/thi-ng/geom/blob/develop/src/gl/core.org][thi.ng.geom.core]] (~gl~) - [[https://gitter.im/thi-ng/geom][discussion]]
 - [[https://github.com/thi-ng/geom/blob/develop/src/gl/buffers.org][thi.ng.geom.buffers]] (~buf~)
 
-* Setup
+** Other
+
+- [[http://learningthreejs.com/blog/2012/02/07/live-video-in-webgl/][Live Video in WebGL (via THREE.js)]]
+
+* Namespaces
 
 #+BEGIN_SRC clojure
-  (ns thi-ng-geom-starter.main
+  (ns thi-ng-geom-starter.video
     (:require [reagent.core :as reagent]
               [thi.ng.math.core :as m :refer [PI HALF_PI TWO_PI]]
               [thi.ng.geom.gl.core :as gl]
@@ -42,6 +46,7 @@
               [thi.ng.geom.vector :as v :refer [vec2 vec3]]
               [thi.ng.geom.matrix :as mat :refer [M44]]
               [thi.ng.geom.aabb :as a]
+              [thi.ng.geom.plane :as p]
               [thi.ng.geom.attribs :as attr]
               [thi.ng.domus.core :as dom]
               [thi.ng.color.core :as col]
@@ -126,26 +131,7 @@ Stream initialisation. This appears to kick off a hidden video player anchored t
         (set-stream-state! :unavailable))))
 #+END_SRC
 
-* Model: Colour-Face Lighting Cube
-
-Create model. We don't link in the camera here, but instead bind that in the update loop, to accomodate window resizing.
-
-#+BEGIN_SRC clojure
-  (defn make-model [gl]
-    (-> (a/aabb 0.8)
-        (g/center)
-        (g/as-mesh
-         {:mesh    (glm/indexed-gl-mesh 12 #{:col :fnorm})
-          ;;:flags   :ewfbs
-          :attribs {:col (->> [[1 0 0] [0 1 0] [0 0 1] [0 1 1] [1 0 1] [1 1 0]]
-                              (map col/rgba)
-                              (attr/const-face-attribs))}})
-        (gl/as-gl-buffer-spec {})
-        (assoc :shader (sh/make-shader-from-spec gl lambert/shader-spec-two-sided-attrib))
-        (gl/make-buffers-in-spec gl glc/static-draw)))
-#+END_SRC
-
-* COMMENT Model: Texture-Mapped Cube
+* Model: Texture-Mapped Cube
 ** Shader
 
 Pretty generic texture mapping.
@@ -176,13 +162,12 @@ Pretty generic texture mapping.
 #+BEGIN_SRC clojure
   (defn make-model [gl]
     (-> (a/aabb 1)
+        #_ (p/plane [0 0 0] 1)
         (g/center)
-        (g/as-mesh
-         {:mesh    (glm/indexed-gl-mesh 12 #{:uv})
-          ;;:flags   :nsb
-          :attribs {:uv (attr/face-attribs (attr/uv-cube-map-v 256 false))}})
+        (g/as-mesh {:mesh    (glm/indexed-gl-mesh 12 #{:uv})
+                    :attribs {:uv attr/uv-faces}})
         (gl/as-gl-buffer-spec {})
-        (assoc :shader (sh/make-shader-from-spec gl shader-spec))
+        (assoc :shader (sh/make-shader-from-spec gl shaders/cube-shader-spec #_ shader-spec))
         (gl/make-buffers-in-spec gl glc/static-draw)))
 #+END_SRC
 
@@ -203,53 +188,81 @@ Rebuild view rectangle (on resize).
              )))
 #+END_SRC
 
-* Setup (File Texture Version)
+* Setup
 
 Setup. Generate a GL context (from DOM element ~main~), viewport rectangle and model, attach to the application. Also kick off the texture loading.
 
 #+BEGIN_SRC clojure
-  (defn init-app [_]
-    (debug "INIT")
-    (let [gl        (gl/gl-context "main")
+  (defn init-app
+    [this]
+    (let [vw        640
+          vh        480
+          gl        (gl/gl-context (reagent/dom-node this))
           view-rect (gl/get-viewport-rect gl)
-          model     (make-model gl)
-          tex-ready (volatile! false)
-          file-tex  (buf/load-texture gl {:callback (fn [tex img] (vreset! tex-ready true))
-                                          :src      "img/cubev.png"
-                                          :flip     true})]
-      (swap! app merge {:gl        gl
-                        :view-rect view-rect
-                        :model     model
-                        :img       (-> (fx/init-fx-quad gl)
-                                       #_(assoc :shader thresh))
-                        :tex-ready tex-ready
-                        :file-tex  file-tex})))
+          thresh    (sh/make-shader-from-spec gl shaders/threshold-shader-spec)
+          hue-shift (sh/make-shader-from-spec gl shaders/hueshift-shader-spec)
+          twirl     (sh/make-shader-from-spec gl shaders/twirl-shader-spec)
+          pixelate  (sh/make-shader-from-spec gl shaders/pixelate-shader-spec)
+          tile      (sh/make-shader-from-spec gl shaders/tile-shader-spec)
+          fbo-tex   (buf/make-texture
+                     gl {:width  512
+                         :height 512
+                         :filter glc/linear
+                         :wrap   glc/clamp-to-edge})
+          fbo       (buf/make-fbo-with-attachments
+                     gl {:tex    fbo-tex
+                         :width  512
+                         :height 512
+                         :depth? true})]
+      (swap! app merge
+             {:gl          gl
+              :view        view-rect
+              :shaders     {:thresh    thresh
+                            :hue-shift hue-shift
+                            :twirl     twirl
+                            :tile      tile
+                            :pixelate  pixelate}
+              :scene       {:fbo     fbo
+                            :fbo-tex fbo-tex
+                            :cube    (make-model gl)
+                            :img     (-> (fx/init-fx-quad gl)
+                                         #_(assoc :shader thresh))}})
+      (init-rtc-stream vw vh)))
 #+END_SRC
 
-* Loop (File Texture Version)
-
-Animation loop. ~update-app~ returns truthy/falsey depending whether Reagent has signalled that the component has been unmounted. If our texture isn't loaded, do nothing (but keep the animation running)
+* Loop (Video Version)
 
 #+BEGIN_SRC clojure
-  (defn update-app [this]
+  (def try-it true)
+
+  (defn update-app
+    [this]
     (fn [t frame]
-      (when (:active (reagent/state this))
-        (let [{:keys [gl view-rect model stream tex-ready file-tex]} @app]
-          (when @tex-ready
-            (gl/bind file-tex)
+      (let [{:keys [gl view scene stream shaders curr-shader]} @app]
+        ;;(debug "frame with tex?" (str (get-in scene [:img :shader])))
+        (when-let [tex (get-in scene [:img :shader :state :tex])]
+          (gl/configure tex {:image (:video stream)})
+          (gl/bind tex)
+          ;; render to texture
+          (when try-it (gl/bind (:fbo scene)))
+          (doto gl
+            (gl/set-viewport 0 0 512 512)
+            (gl/clear-color-and-depth-buffer col/BLACK 1)
+            (gl/draw-with-shader
+             (-> (:img scene)
+                 (assoc-in [:uniforms :time] t)
+                 (assoc :shader (shaders curr-shader)))))
+          (when try-it (gl/unbind (:fbo scene)))
+          ;; render cube to main canvas
+          (when try-it
+            (gl/bind (:fbo-tex scene) 0)
             (doto gl
-              (gl/set-viewport view-rect)
-              (gl/clear-color-and-depth-buffer col/GRAY 1)
+              (gl/set-viewport view)
               (gl/draw-with-shader
-               (-> model
+               (-> (:cube scene)
                    (cam/apply
                     (cam/perspective-camera
-                     {:eye (vec3 0 0 1.25)
-                      ;;:up (m/normalize (vec3 (Math/sin t) 1 0))
-                      :fov 90
-                      :aspect view-rect}))
-                   (assoc-in [:uniforms :model]
-                             (-> M44 (g/rotate-x t) (g/rotate-y (* t 2)))))))))
-
-        true)))
+                     {:eye (vec3 0 0 1.25) :fov 90 :aspect view}))
+                   (assoc-in [:uniforms :model] (-> M44 (g/rotate-x t) (g/rotate-y (* t 2)))))))))
+        (:active (reagent/state this)))))
 #+END_SRC

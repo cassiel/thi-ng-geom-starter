@@ -27,7 +27,7 @@ Original code: this is lifted straight from the Figwheel/Chestnut template. Ever
 
 * Figwheel Core (New with Canvas)
 
-Code lifted pretty much verbatim from [[https://github.com/thi-ng/ws-ldn-8/blob/master/day1/ex03/src/ex03/webgl03.cljs][webgl03]], updated with the Reagent canvas pattern with ~:init~ and ~:loop~ callbacks (into ~main~, the actual application).
+Code lifted pretty much verbatim from [[https://github.com/thi-ng/ws-ldn-8/blob/master/day1/ex03/src/ex03/webgl03.cljs][webgl03]], updated with the Reagent canvas pattern with ~:init~ and ~:loop~ callbacks (into ~main~, the actual application). We added an ~:update~ callback to deal with resizing.
 
 #+BEGIN_SRC clojure
   (ns thi-ng-geom-starter.core
@@ -35,7 +35,9 @@ Code lifted pretty much verbatim from [[https://github.com/thi-ng/ws-ldn-8/blob/
               [thi-ng-geom-starter.canvas :as canvas]
               [thi-ng-geom-starter.main :as main]
               [thi-ng-geom-starter.knots :as knots]
-              [thi-ng-geom-starter.rings :as rings]))
+              [thi-ng-geom-starter.rings :as rings]
+              [thi-ng-geom-starter.video :as video]
+              ))
 #+END_SRC
 
 #+RESULTS:
@@ -50,15 +52,15 @@ Enable console printing:
 #+RESULTS:
 : nil
 
-Define the application component for Reagent. (Controls to come later.) Replace ~main~ by ~knots~ to see the knots demo code.
+Define the application component for Reagent. (Controls to come later.) Replace ~main~ by ~rings~ to see the extrusion demo code, or ~video~ for WebRTC experiments. (We also have ~knots~, but that doesn't have any resizing support.)
 
 #+BEGIN_SRC clojure
     (defn app-component
       []
       [:div
-       [canvas/canvas-component {:init rings/init-app
-                                 :loop rings/update-app
-                                 :update #(swap! rings/app rings/rebuild-viewport)}
+       [canvas/canvas-component {:init video/init-app
+                                 :loop video/update-app
+                                 :update #(swap! video/app video/rebuild-viewport)}
                                  ]
        #_ [controls]])
 #+END_SRC
