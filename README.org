@@ -166,7 +166,7 @@ To see which environment we're currently in:
 #+END_SRC
 
 #+RESULTS:
-: "ClojureScript @ Wed May 18 2016 15:52:17 GMT+0100 (BST)"
+: "ClojureScript @ Thu May 19 2016 15:52:19 GMT+0100 (BST)"
 
 * The Main Application
 

@@ -37,6 +37,7 @@ Code lifted pretty much verbatim from [[https://github.com/thi-ng/ws-ldn-8/blob/
               [thi-ng-geom-starter.knots :as knots]
               [thi-ng-geom-starter.rings :as rings]
               [thi-ng-geom-starter.video :as video]
+              [thi-ng-geom-starter.turtle :as turtle]
               ))
 #+END_SRC
 
@@ -58,9 +59,9 @@ Define the application component for Reagent. (Controls to come later.) Replace 
     (defn app-component
       []
       [:div
-       [canvas/canvas-component {:init video/init-app
-                                 :loop video/update-app
-                                 :update #(swap! video/app video/rebuild-viewport)}
+       [canvas/canvas-component {:init turtle/init-app
+                                 :loop turtle/update-app
+                                 :update #(swap! turtle/app turtle/rebuild-viewport)}
                                  ]
        #_ [controls]])
 #+END_SRC
