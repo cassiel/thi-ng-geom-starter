@@ -1,4 +1,4 @@
-(ns thi-ng-geom-starter.turtle
+(ns thi-ng-geom-starter.t-demo
   (:require [reagent.core :as reagent]
             [thi.ng.math.core :as m :refer [PI HALF_PI TWO_PI]]
             [thi.ng.geom.gl.core :as gl]
@@ -10,21 +10,24 @@
             [thi.ng.geom.gl.glmesh :as glm]
             [thi.ng.geom.gl.camera :as cam]
             [thi.ng.geom.gl.shaders :as sh]
+            [thi.ng.geom.gl.shaders.phong :as phong]
             [thi.ng.geom.gl.shaders.lambert :as lambert]
             [thi.ng.geom.core :as g]
             [thi.ng.geom.vector :as v :refer [vec2 vec3]]
             [thi.ng.geom.matrix :as mat :refer [M44]]
             [thi.ng.geom.aabb :as a]
+            [thi.ng.geom.sphere :as s]
             [thi.ng.geom.attribs :as attr]
             [thi.ng.domus.core :as dom]
             [thi.ng.color.core :as col]
             [thi.ng.strf.core :as f]
-            [thi-ng-geom-starter.shaders :as shaders])
+            [thi-ng-geom-starter.shaders :as shaders]
+            [geometer.turtle :as turtle])
     (:require-macros [cljs-log.core :refer [debug info warn severe]]))
 
 (defonce app (reagent/atom {}))
 
-(defn make-model [gl]
+(def old-mesh
   (-> (a/aabb 0.8)
       (g/center)
       (g/as-mesh
@@ -32,9 +35,14 @@
         ;;:flags   :ewfbs
         :attribs {:col (->> [[1 0 0] [0 1 0] [0 0 1] [0 1 1] [1 0 1] [1 1 0]]
                             (map col/rgba)
-                            (attr/const-face-attribs))}})
+                            (attr/const-face-attribs))}})))
+
+(def turtle-mesh (turtle/plant))
+
+(defn make-model [gl]
+  (-> turtle-mesh
       (gl/as-gl-buffer-spec {})
-      (assoc :shader (sh/make-shader-from-spec gl lambert/shader-spec-two-sided-attrib))
+      (assoc :shader (sh/make-shader-from-spec gl phong/shader-spec))
       (gl/make-buffers-in-spec gl glc/static-draw)))
 
 (defn rebuild-viewport [app]
@@ -51,9 +59,9 @@
   (let [gl        (gl/gl-context "main")
         view-rect (gl/get-viewport-rect gl)
         model     (make-model gl)]
-    (swap! app merge {:gl        gl
-                      :view-rect view-rect
-                      :model     model})))
+    (reset! app {:gl        gl
+                 :view-rect view-rect
+                 :model     model})))
 
 (defn update-app [this]
   (fn [t frame]
@@ -66,9 +74,9 @@
            (-> model
                (cam/apply
                 (cam/perspective-camera
-                 {:eye (vec3 0 0 1.25)
-                  ;;:up (m/normalize (vec3 (Math/sin t) 1 0))
-                  :fov 90
+                 {:eye    (vec3 0 0 1.25)
+                  ;; :up     (m/normalize (vec3 (Math/sin t) 1 0))
+                  :fov    90
                   :aspect view-rect}))
                (assoc-in [:uniforms :model]
                          (-> M44 (g/rotate-x t) (g/rotate-y (* t 2))))))))

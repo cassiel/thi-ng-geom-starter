@@ -1,13 +1,14 @@
--*- mode: org; mode: visual-line; cider-buffer-ns: "thi-ng-geom-starter.turtle" -*-
+-*- mode: org; mode: visual-line; cider-buffer-ns: "thi-ng-geom-starter.t-demo" -*-
 #+STARTUP: indent
-#+PROPERTY: header-args:clojure  :tangle turtle.cljs
+#+PROPERTY: header-args:clojure  :tangle t_demo.cljs
 #+PROPERTY: header-args:clojure+ :results value verbatim replace
 
 * Contents                                                          :TOC_2_org:
  - [[References][References]]
    - [[Geom][Geom]]
- - [[Setup][Setup]]
- - [[Model: Colour-Face Lighting Cube][Model: Colour-Face Lighting Cube]]
+ - [[Namespace][Namespace]]
+ - [[Model][Model]]
+   - [[COMMENT Test][COMMENT Test]]
  - [[Viewport Machinery][Viewport Machinery]]
  - [[Setup][Setup]]
  - [[Loop][Loop]]
@@ -18,38 +19,43 @@
 - [[https://github.com/thi-ng/geom/blob/develop/src/gl/core.org][thi.ng.geom.core]] (~gl~) - [[https://gitter.im/thi-ng/geom][discussion]]
 - [[https://github.com/thi-ng/geom/blob/develop/src/gl/buffers.org][thi.ng.geom.buffers]] (~buf~)
 
-* Setup
+* Namespace
+
+*TODO*: A lot of this can be purged...
 
 #+BEGIN_SRC clojure
-  (ns thi-ng-geom-starter.turtle
-    (:require [reagent.core :as reagent]
-              [thi.ng.math.core :as m :refer [PI HALF_PI TWO_PI]]
-              [thi.ng.geom.gl.core :as gl]
-              [thi.ng.geom.gl.webgl.constants :as glc]
-              [thi.ng.geom.gl.webgl.animator :as anim]
-              [thi.ng.geom.gl.buffers :as buf]
-              [thi.ng.geom.gl.fx :as fx]
-              [thi.ng.geom.gl.shaders :as sh]
-              [thi.ng.geom.gl.glmesh :as glm]
-              [thi.ng.geom.gl.camera :as cam]
-              [thi.ng.geom.gl.shaders :as sh]
-              [thi.ng.geom.gl.shaders.lambert :as lambert]
-              [thi.ng.geom.core :as g]
-              [thi.ng.geom.vector :as v :refer [vec2 vec3]]
-              [thi.ng.geom.matrix :as mat :refer [M44]]
-              [thi.ng.geom.aabb :as a]
-              [thi.ng.geom.attribs :as attr]
-              [thi.ng.domus.core :as dom]
-              [thi.ng.color.core :as col]
-              [thi.ng.strf.core :as f]
-              [thi-ng-geom-starter.shaders :as shaders])
-      (:require-macros [cljs-log.core :refer [debug info warn severe]]))
+    (ns thi-ng-geom-starter.t-demo
+      (:require [reagent.core :as reagent]
+                [thi.ng.math.core :as m :refer [PI HALF_PI TWO_PI]]
+                [thi.ng.geom.gl.core :as gl]
+                [thi.ng.geom.gl.webgl.constants :as glc]
+                [thi.ng.geom.gl.webgl.animator :as anim]
+                [thi.ng.geom.gl.buffers :as buf]
+                [thi.ng.geom.gl.fx :as fx]
+                [thi.ng.geom.gl.shaders :as sh]
+                [thi.ng.geom.gl.glmesh :as glm]
+                [thi.ng.geom.gl.camera :as cam]
+                [thi.ng.geom.gl.shaders :as sh]
+                [thi.ng.geom.gl.shaders.phong :as phong]
+                [thi.ng.geom.gl.shaders.lambert :as lambert]
+                [thi.ng.geom.core :as g]
+                [thi.ng.geom.vector :as v :refer [vec2 vec3]]
+                [thi.ng.geom.matrix :as mat :refer [M44]]
+                [thi.ng.geom.aabb :as a]
+                [thi.ng.geom.sphere :as s]
+                [thi.ng.geom.attribs :as attr]
+                [thi.ng.domus.core :as dom]
+                [thi.ng.color.core :as col]
+                [thi.ng.strf.core :as f]
+                [thi-ng-geom-starter.shaders :as shaders]
+                [geometer.turtle :as turtle])
+        (:require-macros [cljs-log.core :refer [debug info warn severe]]))
 #+END_SRC
 
 #+RESULTS:
 : nil
 
-Application state. This used to be just set once, replaced via ~reset!~ when the initialisation was called on Reagent component mount. Now it's a bit smarter: we swap in the video stream once (if) it kicks off. (It's a Reagent atom so that we can show its state on-screen.)
+Application state. Initialised via ~reset!~, modded on update event (from window resize)..
 
 #+BEGIN_SRC clojure
   (defonce app (reagent/atom {}))
@@ -58,12 +64,12 @@ Application state. This used to be just set once, replaced via ~reset!~ when the
 #+RESULTS:
 : nil
 
-* Model: Colour-Face Lighting Cube
+* Model
 
-Create model. We don't link in the camera here, but instead bind that in the update loop, to accomodate window resizing.
+Create model, lifted from geometer app. We don't link in the camera here, but instead bind that in the update loop, to accomodate window resizing.
 
 #+BEGIN_SRC clojure
-  (defn make-model [gl]
+  (def old-mesh
     (-> (a/aabb 0.8)
         (g/center)
         (g/as-mesh
@@ -71,11 +77,26 @@ Create model. We don't link in the camera here, but instead bind that in the upd
           ;;:flags   :ewfbs
           :attribs {:col (->> [[1 0 0] [0 1 0] [0 0 1] [0 1 1] [1 0 1] [1 1 0]]
                               (map col/rgba)
-                              (attr/const-face-attribs))}})
+                              (attr/const-face-attribs))}})))
+
+  (def turtle-mesh (turtle/plant))
+
+  (defn make-model [gl]
+    (-> turtle-mesh
         (gl/as-gl-buffer-spec {})
-        (assoc :shader (sh/make-shader-from-spec gl lambert/shader-spec-two-sided-attrib))
+        (assoc :shader (sh/make-shader-from-spec gl phong/shader-spec))
         (gl/make-buffers-in-spec gl glc/static-draw)))
 #+END_SRC
+
+#+RESULTS:
+
+** COMMENT Test
+#+BEGIN_SRC clojure
+(type turtle-mesh)
+#+END_SRC
+
+#+RESULTS:
+: thi.ng.geom.types/BasicMesh
 
 * Viewport Machinery
 
@@ -104,9 +125,9 @@ Setup. Generate a GL context (from DOM element ~main~), viewport rectangle and m
     (let [gl        (gl/gl-context "main")
           view-rect (gl/get-viewport-rect gl)
           model     (make-model gl)]
-      (swap! app merge {:gl        gl
-                        :view-rect view-rect
-                        :model     model})))
+      (reset! app {:gl        gl
+                   :view-rect view-rect
+                   :model     model})))
 #+END_SRC
 
 * Loop
@@ -125,9 +146,9 @@ Animation loop. ~update-app~ returns truthy/falsey depending whether Reagent has
              (-> model
                  (cam/apply
                   (cam/perspective-camera
-                   {:eye (vec3 0 0 1.25)
-                    ;;:up (m/normalize (vec3 (Math/sin t) 1 0))
-                    :fov 90
+                   {:eye    (vec3 0 0 1.25)
+                    ;; :up     (m/normalize (vec3 (Math/sin t) 1 0))
+                    :fov    90
                     :aspect view-rect}))
                  (assoc-in [:uniforms :model]
                            (-> M44 (g/rotate-x t) (g/rotate-y (* t 2))))))))

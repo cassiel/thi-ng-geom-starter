@@ -5,17 +5,16 @@
             [thi-ng-geom-starter.knots :as knots]
             [thi-ng-geom-starter.rings :as rings]
             [thi-ng-geom-starter.video :as video]
-            [thi-ng-geom-starter.turtle :as turtle]
-            ))
+            [thi-ng-geom-starter.t-demo :as t-demo]))
 
 (enable-console-print!)
 
 (defn app-component
   []
   [:div
-   [canvas/canvas-component {:init turtle/init-app
-                             :loop turtle/update-app
-                             :update #(swap! turtle/app turtle/rebuild-viewport)}
+   [canvas/canvas-component {:init t-demo/init-app
+                             :loop t-demo/update-app
+                             :update #(swap! t-demo/app t-demo/rebuild-viewport)}
                              ]
    #_ [controls]])
 
