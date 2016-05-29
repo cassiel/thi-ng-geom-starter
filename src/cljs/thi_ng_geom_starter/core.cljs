@@ -12,9 +12,9 @@
 (defn app-component
   []
   [:div
-   [canvas/canvas-component {:init t-demo/init-app
-                             :loop t-demo/update-app
-                             :update #(swap! t-demo/app t-demo/rebuild-viewport)}
+   [canvas/canvas-component {:init video/init-app
+                             :loop video/update-app
+                             :update #(swap! video/app video/rebuild-viewport)}
                              ]
    #_ [controls]])
 

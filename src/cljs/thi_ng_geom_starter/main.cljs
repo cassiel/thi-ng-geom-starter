@@ -70,15 +70,23 @@
       :else
       (set-stream-state! :unavailable))))
 
-(defn make-model [gl]
+(defn cube-mesh [tx]
   (-> (a/aabb 0.8)
       (g/center)
+      (g/translate tx)
       (g/as-mesh
-       {:mesh    (glm/indexed-gl-mesh 12 #{:col :fnorm})
-        ;;:flags   :ewfbs
+       {:mesh    (glm/indexed-gl-mesh 24 #{:col :fnorm})
+        :flags   :ewfbs
         :attribs {:col (->> [[1 0 0] [0 1 0] [0 0 1] [0 1 1] [1 0 1] [1 1 0]]
                             (map col/rgba)
                             (attr/const-face-attribs))}})
+))
+
+(defn make-model [gl]
+  (-> (cube-mesh [0.1 0.1 0.5])
+      (g/into (-> (a/aabb 0.8)
+                  (g/center)
+                  (g/as-mesh {:flags :ewfbs})))
       (gl/as-gl-buffer-spec {})
       (assoc :shader (sh/make-shader-from-spec gl lambert/shader-spec-two-sided-attrib))
       (gl/make-buffers-in-spec gl glc/static-draw)))

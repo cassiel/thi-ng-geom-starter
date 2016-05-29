@@ -92,10 +92,12 @@
               :blend-fn   [glc/src-alpha glc/one]}})
 
 (defn make-model [gl]
-  (-> (p/plane [0 0 0] 1)
-      (g/center)
-      (g/as-mesh {:mesh (glm/gl-mesh 2 #{:uv})
+  (-> (p/plane [1 0 0] 0.5)
+  ;;(g/center)
+      (g/as-mesh {:mesh (glm/gl-mesh (* 2 2) #{:uv})
                   :attribs {:uv attr/uv-faces}})
+      (g/into (-> (p/plane [1 0 0] -0.5)
+                  (g/as-mesh)))
       (gl/as-gl-buffer-spec {})
       (assoc :shader (sh/make-shader-from-spec gl shader-spec))
       (gl/make-buffers-in-spec gl glc/static-draw)))

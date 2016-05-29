@@ -135,7 +135,7 @@ Stream initialisation. This appears to kick off a hidden video player anchored t
 * Model: Plane
 ** Shader
 
-Pretty generic texture mapping, give ~UV~ pass-through.
+Pretty generic texture mapping, give ~UV~ pass-through. A bit of blending as well.
 
 #+BEGIN_SRC clojure
   (def shader-spec
@@ -160,14 +160,18 @@ Pretty generic texture mapping, give ~UV~ pass-through.
 
 ** Model
 
-Based on [[file:main.org::*Model:%20Colour-Face%20Lighting%20Cube][main/Model: Colour-Face Lighting Cube]]. We don't need an indexed mesh. Num faces is 2 (post-tesselation). ~attr/uv-faces~ is part of the cube generator but works fine as a generic rectangular face mapping (see [[https://github.com/thi-ng/geom/blob/develop/src/types/attribs.org][attribs]]).
+Based on [[file:main.org::*Model:%20Colour-Face%20Lighting%20Cube][main/Model: Colour-Face Lighting Cube]]. We don't need an indexed mesh. Num faces is 2 per plane (post-tesselation). ~attr/uv-faces~ is part of the cube generator but works fine as a generic rectangular face mapping (see [[https://github.com/thi-ng/geom/blob/develop/src/types/attribs.org][attribs]]).
+
+*TODO* we aren't getting UV set properly for the second plane.
 
 #+BEGIN_SRC clojure
   (defn make-model [gl]
-    (-> (p/plane [0 0 0] 1)
-        (g/center)
-        (g/as-mesh {:mesh (glm/gl-mesh 2 #{:uv})
+    (-> (p/plane [1 0 0] 0.5)
+    ;;(g/center)
+        (g/as-mesh {:mesh (glm/gl-mesh (* 2 2) #{:uv})
                     :attribs {:uv attr/uv-faces}})
+        (g/into (-> (p/plane [1 0 0] -0.5)
+                    (g/as-mesh)))
         (gl/as-gl-buffer-spec {})
         (assoc :shader (sh/make-shader-from-spec gl shader-spec))
         (gl/make-buffers-in-spec gl glc/static-draw)))
