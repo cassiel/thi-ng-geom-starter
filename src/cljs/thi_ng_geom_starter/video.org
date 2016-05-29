@@ -8,7 +8,10 @@
    - [[Geom][Geom]]
    - [[Other][Other]]
  - [[Namespaces][Namespaces]]
+ - [[DOM Media Containers][DOM Media Containers]]
+ - [[Texture Creation][Texture Creation]]
  - [[Stream Setup][Stream Setup]]
+ - [[Image Setup][Image Setup]]
  - [[Model: Plane][Model: Plane]]
    - [[Shader][Shader]]
    - [[Model][Model]]
@@ -68,16 +71,27 @@ Application state. This used to be just set once, replaced via ~reset!~ when the
 #+RESULTS:
 : nil
 
-* Stream Setup
 
-Helper: set stream state:
+* DOM Media Containers
 
 #+BEGIN_SRC clojure
-  (defn set-stream-state! [state]
-    (swap! app assoc-in [:stream :state] state))
+  (defn add-video-container [w h]
+    (dom/create-dom! [:video {:width w :height h :hidden false :autoplay true}]
+                     (.-body js/document)))
+
+  (defn add-image-container [w h url loaded-fn]
+    (let [d (dom/create-dom! [:img {:width w
+                                    :height h}]
+                             (.-body js/document))]
+
+      (set! (.-onload d) #(loaded-fn d))
+      (set! (.-src d) url)
+      d))
 #+END_SRC
 
-Set up video texture. Requires a GL context.
+* Texture Creation
+
+Create "canvas" texture, bind into ~app~ state.
 
 #+BEGIN_SRC clojure
   (defn init-video-texture [video]
@@ -90,9 +104,35 @@ Set up video texture. Requires a GL context.
                 :height      (.-height video)
                 :flip        true
                 :premultiply false})]
-      (debug "SWAPPING!")
       (swap! app assoc-in [:scene :img :shader :state :tex] tex)))
 #+END_SRC
+
+Copy-and-paste: image texture.
+
+#+BEGIN_SRC clojure
+  (defn init-image-texture [image]
+    (let [tex (buf/make-canvas-texture
+               (:gl @app)
+               image
+               {:filter      glc/linear
+                :wrap        glc/clamp-to-edge
+                :width       (.-width image)
+                :height      (.-height image)
+                :flip        true
+                :premultiply false})]
+      (swap! app assoc-in [:scene :img :shader :state :tex] tex)))
+#+END_SRC
+
+* Stream Setup
+
+Helper: set stream state:
+
+#+BEGIN_SRC clojure
+  (defn set-stream-state! [state]
+    (swap! app assoc-in [:stream :state] state))
+#+END_SRC
+
+Set up video texture. Requires a GL context.
 
 Activate the RTC stream.
 
@@ -109,33 +149,45 @@ Activate the RTC stream.
     (init-video-texture video))
 #+END_SRC
 
-Stream initialisation. This appears to kick off a hidden video player anchored to the document body.
+Stream initialisation. Add a video player to the DOM, then attempt to access camera.
+
+Note: this API feature is deprecated: [[https://developer.mozilla.org/en/docs/Web/API/Navigator/getUserMedia]]
 
 #+BEGIN_SRC clojure
-   (defn init-rtc-stream [w h]
-     (let [video (dom/create-dom!
-                  [:video {:width w :height h :hidden false :autoplay true}]
-                  (.-body js/document))
-           ]
-       (cond
-         (aget js/navigator "webkitGetUserMedia")
-         (.webkitGetUserMedia js/navigator #js {:video true}
-                              #(activate-rtc-stream video %)
-                              #(set-stream-state! :forbidden))
+  (defn init-rtc-stream [w h]
+    (let [video (add-video-container w h)]
+      (cond
+        (aget js/navigator "webkitGetUserMedia")
+        (.webkitGetUserMedia js/navigator #js {:video true}
+                             #(activate-rtc-stream video %)
+                             #(set-stream-state! :forbidden))
 
-         (aget js/navigator "mozGetUserMedia")
-         (.mozGetUserMedia js/navigator #js {:video true}
-                           #(activate-rtc-stream video %)
-                           #(set-stream-state! :forbidden))
+        (aget js/navigator "mozGetUserMedia")
+        (.mozGetUserMedia js/navigator #js {:video true}
+                          #(activate-rtc-stream video %)
+                          #(set-stream-state! :forbidden))
 
-         :else
-         (set-stream-state! :unavailable))))
+        :else
+        (set-stream-state! :unavailable))))
 #+END_SRC
+
+* Image Setup
+
+#+BEGIN_SRC clojure
+  (defn init-image [w h]
+    (let [url "img/chocolate.jpg"
+          image (add-image-container w h url
+                                     #(do
+                                        (init-image-texture %)
+                                        (set-stream-state! :image)))]))
+#+END_SRC
+
+
 
 * Model: Plane
 ** Shader
 
-Pretty generic texture mapping, give ~UV~ pass-through. A bit of blending as well.
+Pretty generic texture mapping, give ~UV~ pass-through. Also, blend rather than depth-test.
 
 #+BEGIN_SRC clojure
   (def shader-spec
@@ -166,11 +218,11 @@ Based on [[file:main.org::*Model:%20Colour-Face%20Lighting%20Cube][main/Model: C
 
 #+BEGIN_SRC clojure
   (defn make-model [gl]
-    (-> (p/plane [1 0 0] 0.5)
+    (-> (p/plane v/V3X 0.5)
     ;;(g/center)
         (g/as-mesh {:mesh (glm/gl-mesh (* 2 2) #{:uv})
                     :attribs {:uv attr/uv-faces}})
-        (g/into (-> (p/plane [1 0 0] -0.5)
+        (g/into (-> (p/plane v/V3Y -0.5)
                     (g/as-mesh)))
         (gl/as-gl-buffer-spec {})
         (assoc :shader (sh/make-shader-from-spec gl shader-spec))
@@ -232,8 +284,10 @@ Setup. Generate a GL context (from DOM element ~main~), viewport rectangle and m
                             :fbo-tex fbo-tex
                             :model   (make-model gl)
                             :img     (-> (fx/init-fx-quad gl)
-                                         #_(assoc :shader thresh))}})
-      (init-rtc-stream vw vh)))
+                                         #_ (assoc :shader thresh))}})
+      ;;(init-rtc-stream vw vh)
+      (init-image vw vh)
+      ))
 #+END_SRC
 
 * Loop (Video Version)

@@ -26,8 +26,18 @@
 (defonce app (reagent/atom {:stream {:state :wait}
                             :curr-shader :thresh}))
 
-(defn set-stream-state! [state]
-  (swap! app assoc-in [:stream :state] state))
+(defn add-video-container [w h]
+  (dom/create-dom! [:video {:width w :height h :hidden false :autoplay true}]
+                   (.-body js/document)))
+
+(defn add-image-container [w h url loaded-fn]
+  (let [d (dom/create-dom! [:img {:width w
+                                  :height h}]
+                           (.-body js/document))]
+
+    (set! (.-onload d) #(loaded-fn d))
+    (set! (.-src d) url)
+    d))
 
 (defn init-video-texture [video]
   (let [tex (buf/make-canvas-texture
@@ -39,8 +49,22 @@
               :height      (.-height video)
               :flip        true
               :premultiply false})]
-    (debug "SWAPPING!")
     (swap! app assoc-in [:scene :img :shader :state :tex] tex)))
+
+(defn init-image-texture [image]
+  (let [tex (buf/make-canvas-texture
+             (:gl @app)
+             image
+             {:filter      glc/linear
+              :wrap        glc/clamp-to-edge
+              :width       (.-width image)
+              :height      (.-height image)
+              :flip        true
+              :premultiply false})]
+    (swap! app assoc-in [:scene :img :shader :state :tex] tex)))
+
+(defn set-stream-state! [state]
+  (swap! app assoc-in [:stream :state] state))
 
 (defn activate-rtc-stream [video stream]
   (swap! app assoc-in [:stream :video] video)
@@ -54,10 +78,7 @@
   (init-video-texture video))
 
 (defn init-rtc-stream [w h]
-  (let [video (dom/create-dom!
-               [:video {:width w :height h :hidden false :autoplay true}]
-               (.-body js/document))
-        ]
+  (let [video (add-video-container w h)]
     (cond
       (aget js/navigator "webkitGetUserMedia")
       (.webkitGetUserMedia js/navigator #js {:video true}
@@ -71,6 +92,13 @@
 
       :else
       (set-stream-state! :unavailable))))
+
+(defn init-image [w h]
+  (let [url "img/chocolate.jpg"
+        image (add-image-container w h url
+                                   #(do
+                                      (init-image-texture %)
+                                      (set-stream-state! :image)))]))
 
 (def shader-spec
   {:vs "void main() {
@@ -92,11 +120,11 @@
               :blend-fn   [glc/src-alpha glc/one]}})
 
 (defn make-model [gl]
-  (-> (p/plane [1 0 0] 0.5)
+  (-> (p/plane v/V3X 0.5)
   ;;(g/center)
       (g/as-mesh {:mesh (glm/gl-mesh (* 2 2) #{:uv})
                   :attribs {:uv attr/uv-faces}})
-      (g/into (-> (p/plane [1 0 0] -0.5)
+      (g/into (-> (p/plane v/V3Y -0.5)
                   (g/as-mesh)))
       (gl/as-gl-buffer-spec {})
       (assoc :shader (sh/make-shader-from-spec gl shader-spec))
@@ -144,8 +172,10 @@
                           :fbo-tex fbo-tex
                           :model   (make-model gl)
                           :img     (-> (fx/init-fx-quad gl)
-                                       #_(assoc :shader thresh))}})
-    (init-rtc-stream vw vh)))
+                                       #_ (assoc :shader thresh))}})
+    ;;(init-rtc-stream vw vh)
+    (init-image vw vh)
+    ))
 
 (def try-it true)
 

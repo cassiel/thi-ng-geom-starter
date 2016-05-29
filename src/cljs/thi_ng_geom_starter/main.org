@@ -138,7 +138,7 @@ Attempting a bit of ~g/into~. It looks as if the first mesh (only) can carry the
         (g/center)
         (g/translate tx)
         (g/as-mesh
-         {:mesh    (glm/indexed-gl-mesh 24 #{:col :fnorm})
+         {:mesh    (glm/indexed-gl-mesh (* 12 2) #{:col :fnorm})
           :flags   :ewfbs
           :attribs {:col (->> [[1 0 0] [0 1 0] [0 0 1] [0 1 1] [1 0 1] [1 1 0]]
                               (map col/rgba)
