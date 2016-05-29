@@ -24,7 +24,7 @@
     (:require-macros [cljs-log.core :refer [debug info warn severe]]))
 
 (defonce app (reagent/atom {:stream {:state :wait}
-                            :curr-shader :thresh}))
+                            :curr-shader :twirl}))
 
 (defn add-video-container [w h]
   (dom/create-dom! [:video {:width w :height h :hidden false :autoplay true}]
@@ -39,26 +39,14 @@
     (set! (.-src d) url)
     d))
 
-(defn init-video-texture [video]
+(defn init-texture [container]
   (let [tex (buf/make-canvas-texture
              (:gl @app)
-             video
+             container
              {:filter      glc/linear
               :wrap        glc/clamp-to-edge
-              :width       (.-width video)
-              :height      (.-height video)
-              :flip        true
-              :premultiply false})]
-    (swap! app assoc-in [:scene :img :shader :state :tex] tex)))
-
-(defn init-image-texture [image]
-  (let [tex (buf/make-canvas-texture
-             (:gl @app)
-             image
-             {:filter      glc/linear
-              :wrap        glc/clamp-to-edge
-              :width       (.-width image)
-              :height      (.-height image)
+              :width       (.-width container)
+              :height      (.-height container)
               :flip        true
               :premultiply false})]
     (swap! app assoc-in [:scene :img :shader :state :tex] tex)))
@@ -75,7 +63,7 @@
   (set! (.-src video)
         (.createObjectURL (or (aget js/window "URL") (aget js/window "webkitURL")) stream))
   (set-stream-state! :ready)
-  (init-video-texture video))
+  (init-texture video))
 
 (defn init-rtc-stream [w h]
   (let [video (add-video-container w h)]
@@ -97,8 +85,18 @@
   (let [url "img/chocolate.jpg"
         image (add-image-container w h url
                                    #(do
-                                      (init-image-texture %)
-                                      (set-stream-state! :image)))]))
+                                      (init-texture %)
+                                      (set-stream-state! :image)))]
+        (swap! app assoc-in [:stream :video] image)))
+
+(defn init-video [w h]
+  (let [c (dom/create-dom! [:video {:width w :height h :hidden false :autoplay true}
+                            [:source {:src "video/s.mov"}]]
+                           (.-body js/document))]
+    (set! (.-oncanplay c) #(do (js/console.log "VIDEO onload")
+                                  (init-texture c)
+                                  (set-stream-state! :video)))
+    (swap! app assoc-in [:stream :video] c)))
 
 (def shader-spec
   {:vs "void main() {
@@ -174,6 +172,7 @@
                           :img     (-> (fx/init-fx-quad gl)
                                        #_ (assoc :shader thresh))}})
     ;;(init-rtc-stream vw vh)
+    ;;(init-video vw vh)
     (init-image vw vh)
     ))
 

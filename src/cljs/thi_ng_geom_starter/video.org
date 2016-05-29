@@ -12,6 +12,7 @@
  - [[Texture Creation][Texture Creation]]
  - [[Stream Setup][Stream Setup]]
  - [[Image Setup][Image Setup]]
+ - [[Video Player Setup][Video Player Setup]]
  - [[Model: Plane][Model: Plane]]
    - [[Shader][Shader]]
    - [[Model][Model]]
@@ -65,7 +66,7 @@ Application state. This used to be just set once, replaced via ~reset!~ when the
 
 #+BEGIN_SRC clojure
   (defonce app (reagent/atom {:stream {:state :wait}
-                              :curr-shader :thresh}))
+                              :curr-shader :twirl}))
 #+END_SRC
 
 #+RESULTS:
@@ -94,30 +95,14 @@ Application state. This used to be just set once, replaced via ~reset!~ when the
 Create "canvas" texture, bind into ~app~ state.
 
 #+BEGIN_SRC clojure
-  (defn init-video-texture [video]
+  (defn init-texture [container]
     (let [tex (buf/make-canvas-texture
                (:gl @app)
-               video
+               container
                {:filter      glc/linear
                 :wrap        glc/clamp-to-edge
-                :width       (.-width video)
-                :height      (.-height video)
-                :flip        true
-                :premultiply false})]
-      (swap! app assoc-in [:scene :img :shader :state :tex] tex)))
-#+END_SRC
-
-Copy-and-paste: image texture.
-
-#+BEGIN_SRC clojure
-  (defn init-image-texture [image]
-    (let [tex (buf/make-canvas-texture
-               (:gl @app)
-               image
-               {:filter      glc/linear
-                :wrap        glc/clamp-to-edge
-                :width       (.-width image)
-                :height      (.-height image)
+                :width       (.-width container)
+                :height      (.-height container)
                 :flip        true
                 :premultiply false})]
       (swap! app assoc-in [:scene :img :shader :state :tex] tex)))
@@ -146,7 +131,7 @@ Activate the RTC stream.
     (set! (.-src video)
           (.createObjectURL (or (aget js/window "URL") (aget js/window "webkitURL")) stream))
     (set-stream-state! :ready)
-    (init-video-texture video))
+    (init-texture video))
 #+END_SRC
 
 Stream initialisation. Add a video player to the DOM, then attempt to access camera.
@@ -173,16 +158,32 @@ Note: this API feature is deprecated: [[https://developer.mozilla.org/en/docs/We
 
 * Image Setup
 
+*TODO* In all of these initialisers, we don't seem to be able to keep the custom shader and also do the ~gl/configure~ to keep tracking new frames. (But I have some code somewhere which does achieve this.)
+
 #+BEGIN_SRC clojure
   (defn init-image [w h]
     (let [url "img/chocolate.jpg"
           image (add-image-container w h url
                                      #(do
-                                        (init-image-texture %)
-                                        (set-stream-state! :image)))]))
+                                        (init-texture %)
+                                        (set-stream-state! :image)))]
+      ;; This is the line that kills the custom shader. (We need this to update
+      ;; frames from video or camera.)
+      (swap! app assoc-in [:stream :video] image)))
 #+END_SRC
 
+* Video Player Setup
 
+#+BEGIN_SRC clojure
+  (defn init-video [w h]
+    (let [c (dom/create-dom! [:video {:width w :height h :hidden false :autoplay true}
+                              [:source {:src "video/s.mov"}]]
+                             (.-body js/document))]
+      (set! (.-oncanplay c) #(do (js/console.log "VIDEO onload")
+                                    (init-texture c)
+                                    (set-stream-state! :video)))
+      (swap! app assoc-in [:stream :video] c)))
+#+END_SRC
 
 * Model: Plane
 ** Shader
@@ -286,6 +287,7 @@ Setup. Generate a GL context (from DOM element ~main~), viewport rectangle and m
                             :img     (-> (fx/init-fx-quad gl)
                                          #_ (assoc :shader thresh))}})
       ;;(init-rtc-stream vw vh)
+      ;;(init-video vw vh)
       (init-image vw vh)
       ))
 #+END_SRC
