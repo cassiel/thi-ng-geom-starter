@@ -11,10 +11,14 @@
 
 (enable-console-print!)
 
+;;(def app dummy/app)
+;;(def app raycast/app)
+(def app video/app)
+
 (defn app-component
   []
   [:div
-   [canvas/canvas-component (raycast/app) (atom {})]
+   [canvas/canvas-component (app) (atom {})]
    #_ [controls]])
 
 (reagent/render [app-component] (js/document.getElementById "app"))

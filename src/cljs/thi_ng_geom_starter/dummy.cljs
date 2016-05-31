@@ -4,13 +4,12 @@
 
 (defn app []
   (reify px/APP
-    (init-app [_]
+    (init-app [_ component app-state]
       (debug "dummy: INIT")
-      {:junk1 "JUNK" :junk2 "JUNK "})
+      (reset! app-state {:junk1 "JUNK" :junk2 "JUNK"}))
 
-    (update-app [_ component app-state t frame]
-      (debug "dummy: UPDATE t=" t " frame=" frame)
-      true)
+    (update-app [_ component app-state]
+      (fn [t frame] true))
 
     (resize-app [_ app-state]
       (debug "RESIZE")

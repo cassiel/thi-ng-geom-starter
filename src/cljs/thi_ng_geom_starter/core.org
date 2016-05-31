@@ -6,6 +6,8 @@
 * Comtemts                                                        :TOC_2_org:
  - [[COMMENT Figwheel Core][COMMENT Figwheel Core]]
  - [[Figwheel Core (New with Canvas)][Figwheel Core (New with Canvas)]]
+   - [[Application Selection][Application Selection]]
+   - [[Linkage][Linkage]]
 
 * COMMENT Figwheel Core                                          :deprecated:
 
@@ -54,15 +56,25 @@ Enable console printing:
 #+RESULTS:
 : nil
 
+** Application Selection
+
 Define the application component for Reagent. (Controls to come later.) Replace ~main~ by ~rings~ to see the extrusion demo code, or ~video~ for WebRTC experiments. (We also have ~knots~, but that doesn't have any resizing support.)
 
-This might be slightly dodgy, since the first argument to ~canvas-component~ is a reified object, not a map.
+#+BEGIN_SRC clojure
+;;(def app dummy/app)
+;;(def app raycast/app)
+(def app video/app)
+#+END_SRC
+
+** Linkage
+
+This might be slightly dodgy, since the first argument to ~canvas-component~ is a reified object, not a map. (Also the second is a plain atom, not a Reagent atom, but I don't think we want to be triggering updates as it changes.)
 
 #+BEGIN_SRC clojure
   (defn app-component
     []
     [:div
-     [canvas/canvas-component (raycast/app) (atom {})]
+     [canvas/canvas-component (app) (atom {})]
      #_ [controls]])
 #+END_SRC
 

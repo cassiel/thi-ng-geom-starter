@@ -19,6 +19,7 @@
  - [[Viewport Machinery][Viewport Machinery]]
  - [[Setup][Setup]]
  - [[Loop (Video Version)][Loop (Video Version)]]
+ - [[Assembled App][Assembled App]]
 
 * Reference
 ** Geom
@@ -38,6 +39,7 @@
 #+BEGIN_SRC clojure
   (ns thi-ng-geom-starter.video
     (:require [reagent.core :as reagent]
+              [thi-ng-geom-starter.protocols :as px]
               [thi.ng.math.core :as m :refer [PI HALF_PI TWO_PI]]
               [thi.ng.geom.gl.core :as gl]
               [thi.ng.geom.gl.webgl.constants :as glc]
@@ -65,17 +67,6 @@
 #+RESULTS:
 : nil
 
-Application state. This used to be just set once, replaced via ~reset!~ when the initialisation was called on Reagent component mount. Now it's a bit smarter: we swap in the video stream once (if) it kicks off. (It's a Reagent atom so that we can show its state on-screen.)
-
-#+BEGIN_SRC clojure
-  (defonce app (reagent/atom {:stream {:state :wait}
-                              :curr-shader :twirl}))
-#+END_SRC
-
-#+RESULTS:
-: nil
-
-
 * DOM Media Containers
 
 #+BEGIN_SRC clojure
@@ -98,9 +89,9 @@ Application state. This used to be just set once, replaced via ~reset!~ when the
 Create "canvas" texture, bind into ~app~ state.
 
 #+BEGIN_SRC clojure
-  (defn init-texture [container]
+  (defn init-texture [app-state-atom container]
     (let [tex (buf/make-canvas-texture
-               (:gl @app)
+               (:gl @app-state-atom)
                container
                {:filter      glc/linear
                 :wrap        glc/clamp-to-edge
@@ -108,7 +99,8 @@ Create "canvas" texture, bind into ~app~ state.
                 :height      (.-height container)
                 :flip        true
                 :premultiply false})]
-      (swap! app assoc-in [:scene :img :shader :state :tex] tex)))
+      (swap! app-state-atom assoc-in [:scene :img :shader :state :tex] tex)
+      (debug (get-in @app-state-atom [:scene :img :shader :state :tex]))))
 #+END_SRC
 
 * Stream Setup
@@ -116,8 +108,8 @@ Create "canvas" texture, bind into ~app~ state.
 Helper: set stream state:
 
 #+BEGIN_SRC clojure
-  (defn set-stream-state! [state]
-    (swap! app assoc-in [:stream :state] state))
+  (defn set-stream-state! [app-state-atom state]
+    (swap! app-state-atom assoc-in [:stream :state] state))
 #+END_SRC
 
 Set up video texture. Requires a GL context.
@@ -125,16 +117,17 @@ Set up video texture. Requires a GL context.
 Activate the RTC stream.
 
 #+BEGIN_SRC clojure
-  (defn activate-rtc-stream [video stream]
-    (swap! app assoc-in [:stream :video] video)
+  (defn activate-rtc-stream [app-state-atom video stream]
+    (debug "activate")
+    (swap! app-state-atom assoc-in [:stream :video] video)
     (set! (.-onerror video)
-          (fn [] (.stop stream) (set-stream-state! :error)))
+          (fn [] (.stop stream) (set-stream-state! app-state-atom :error)))
     (set! (.-onended stream)
-          (fn [] (.stop stream) (set-stream-state! :stopped)))
+          (fn [] (.stop stream) (set-stream-state! app-state-atom :stopped)))
     (set! (.-src video)
           (.createObjectURL (or (aget js/window "URL") (aget js/window "webkitURL")) stream))
-    (set-stream-state! :ready)
-    (init-texture video))
+    (set-stream-state! app-state-atom :ready)
+    (init-texture app-state-atom video))
 #+END_SRC
 
 Stream initialisation. Add a video player to the DOM, then attempt to access camera.
@@ -142,21 +135,21 @@ Stream initialisation. Add a video player to the DOM, then attempt to access cam
 Note: this API feature is deprecated: [[https://developer.mozilla.org/en/docs/Web/API/Navigator/getUserMedia]]
 
 #+BEGIN_SRC clojure
-  (defn init-rtc-stream [w h]
+  (defn init-rtc-stream [app-state-atom w h]
     (let [video (add-video-container w h)]
       (cond
         (aget js/navigator "webkitGetUserMedia")
         (.webkitGetUserMedia js/navigator #js {:video true}
-                             #(activate-rtc-stream video %)
-                             #(set-stream-state! :forbidden))
+                             #(activate-rtc-stream app-state-atom video %)
+                             #(set-stream-state! app-state-atom :forbidden))
 
         (aget js/navigator "mozGetUserMedia")
         (.mozGetUserMedia js/navigator #js {:video true}
-                          #(activate-rtc-stream video %)
-                          #(set-stream-state! :forbidden))
+                          #(activate-rtc-stream app-state-atom video %)
+                          #(set-stream-state! app-state-atom :forbidden))
 
         :else
-        (set-stream-state! :unavailable))))
+        (set-stream-state! app-state-atom :unavailable))))
 #+END_SRC
 
 * Image Setup
@@ -164,28 +157,27 @@ Note: this API feature is deprecated: [[https://developer.mozilla.org/en/docs/We
 *TODO* In all of these initialisers, we don't seem to be able to keep the custom shader and also do the ~gl/configure~ to keep tracking new frames. (But I have some code somewhere which does achieve this.)
 
 #+BEGIN_SRC clojure
-  (defn init-image [w h]
+  (defn init-image [app-state-atom w h]
     (let [url "img/chocolate.jpg"
           image (add-image-container w h url
                                      #(do
-                                        (init-texture %)
-                                        (set-stream-state! :image)))]
-      ;; This is the line that kills the custom shader. (We need this to update
-      ;; frames from video or camera.)
-      (swap! app assoc-in [:stream :video] image)))
+                                        (debug "image loaded")
+                                        (init-texture app-state-atom %)
+                                        (set-stream-state! app-state-atom :image)))]
+      (swap! app-state-atom assoc-in [:stream :video] image)))
 #+END_SRC
 
 * Video Player Setup
 
 #+BEGIN_SRC clojure
-  (defn init-video [w h]
+  (defn init-video [app-state-atom w h]
     (let [c (dom/create-dom! [:video {:width w :height h :hidden false :autoplay true}
                               [:source {:src "video/s.mov"}]]
                              (.-body js/document))]
       (set! (.-oncanplay c) #(do (js/console.log "VIDEO onload")
-                                    (init-texture c)
-                                    (set-stream-state! :video)))
-      (swap! app assoc-in [:stream :video] c)))
+                                    (init-texture app-state-atom c)
+                                    (set-stream-state! app-state-atom :video)))
+      (swap! app-state-atom assoc-in [:stream :video] c)))
 #+END_SRC
 
 * Model: Plane
@@ -255,11 +247,11 @@ Rebuild view rectangle (on resize).
 Setup. Generate a GL context (from DOM element ~main~), viewport rectangle and model, attach to the application. Also kick off the texture loading.
 
 #+BEGIN_SRC clojure
-  (defn init-app
-    [this]
+  (defn do-init
+    [component app-state-atom]
     (let [vw        640
           vh        480
-          gl        (gl/gl-context (reagent/dom-node this))
+          gl        (gl/gl-context (reagent/dom-node component))
           view-rect (gl/get-viewport-rect gl)
           thresh    (sh/make-shader-from-spec gl shaders/threshold-shader-spec)
           hue-shift (sh/make-shader-from-spec gl shaders/hueshift-shader-spec)
@@ -276,58 +268,77 @@ Setup. Generate a GL context (from DOM element ~main~), viewport rectangle and m
                          :width  512
                          :height 512
                          :depth? true})]
-      (swap! app merge
-             {:gl          gl
-              :view        view-rect
-              :shaders     {:thresh    thresh
-                            :hue-shift hue-shift
-                            :twirl     twirl
-                            :tile      tile
-                            :pixelate  pixelate}
-              :scene       {:fbo     fbo
-                            :fbo-tex fbo-tex
-                            :model   (make-model gl)
-                            :img     (-> (fx/init-fx-quad gl)
-                                         #_ (assoc :shader thresh))}})
-      ;;(init-rtc-stream vw vh)
+      (reset! app-state-atom
+              {:stream {:state :wait}
+               :curr-shader :twirl
+               :gl          gl
+               :view        view-rect
+               :shaders     {:thresh    thresh
+                             :hue-shift hue-shift
+                             :twirl     twirl
+                             :tile      tile
+                             :pixelate  pixelate}
+               :scene       {:fbo     fbo
+                             :fbo-tex fbo-tex
+                             :model   (make-model gl)
+                             :img     (-> (fx/init-fx-quad gl)
+                                          #_ (assoc :shader thresh))}})
+      ;;(init-image app-state-atom vw vh)
+      (init-rtc-stream app-state-atom vw vh)
       ;;(init-video vw vh)
-      (init-image vw vh)
+
       ))
 #+END_SRC
 
 * Loop (Video Version)
 
 #+BEGIN_SRC clojure
-  (def try-it true)
+    (def try-it true)
 
-  (defn update-app
-    [this]
-    (fn [t frame]
-      (let [{:keys [gl view scene stream shaders curr-shader]} @app]
-        ;;(debug "frame with tex?" (str (get-in scene [:img :shader])))
-        (when-let [tex (get-in scene [:img :shader :state :tex])]
-          ;;(gl/configure tex {:image (:video stream)})
-          (gl/bind tex)
-          ;; render to texture
-          (when try-it (gl/bind (:fbo scene)))
-          (doto gl
-            (gl/set-viewport 0 0 512 512)
-            (gl/clear-color-and-depth-buffer col/BLACK 1)
-            (gl/draw-with-shader
-             (-> (:img scene)
-                 (assoc-in [:uniforms :time] t)
-                 (assoc :shader (shaders curr-shader)))))
-          (when try-it (gl/unbind (:fbo scene)))
-          ;; render model to main canvas
-          (when try-it
-            (gl/bind (:fbo-tex scene) 0)
+    (defn do-update
+      [this app]
+      (fn [t frame]
+        (let [{:keys [gl view scene stream shaders curr-shader]} @app]
+          (when-let [tex (get-in scene [:img :shader :state :tex])]
+            ;; This is the line that kills the custom shader. (We need this to update
+            ;; frames from video or camera.)
+            (gl/configure tex {:image (:video stream)})
+            (gl/bind tex)
+            ;; render to texture
+            (when try-it (gl/bind (:fbo scene)))
             (doto gl
-              (gl/set-viewport view)
+              (gl/set-viewport 0 0 512 512)
+              (gl/clear-color-and-depth-buffer col/BLACK 1)
               (gl/draw-with-shader
-               (-> (:model scene)
-                   (cam/apply
-                    (cam/perspective-camera
-                     {:eye (vec3 0 0 1.0) :fov 90 :aspect view}))
-                   (assoc-in [:uniforms :model] (-> M44 (g/rotate-x t) (g/rotate-y (* t 2)))))))))
-        (:active (reagent/state this)))))
+               (-> (:img scene)
+                   (assoc-in [:uniforms :time] t)
+                   (assoc :shader (shaders curr-shader)))))
+            (when try-it (gl/unbind (:fbo scene)))
+            ;; render model to main canvas
+            (when try-it
+              (gl/bind (:fbo-tex scene) 0)
+              (doto gl
+                (gl/set-viewport view)
+                (gl/draw-with-shader
+                 (-> (:model scene)
+                     (cam/apply
+                      (cam/perspective-camera
+                       {:eye (vec3 0 0 1.0) :fov 90 :aspect view}))
+                     (assoc-in [:uniforms :model] (-> M44 (g/rotate-x t) (g/rotate-y (* t 2)))))))))
+          (:active (reagent/state this)))))
+#+END_SRC
+
+* Assembled App
+
+#+BEGIN_SRC clojure
+  (defn app []
+    (reify px/APP
+      (init-app [_ component app-state-atom]
+        (do-init component app-state-atom))
+
+      (update-app [_ component app-state-atom]
+        (do-update component app-state-atom))
+
+      (resize-app [_ app-state]
+        (rebuild-viewport app-state))))
 #+END_SRC

@@ -1,5 +1,6 @@
 (ns thi-ng-geom-starter.video
   (:require [reagent.core :as reagent]
+            [thi-ng-geom-starter.protocols :as px]
             [thi.ng.math.core :as m :refer [PI HALF_PI TWO_PI]]
             [thi.ng.geom.gl.core :as gl]
             [thi.ng.geom.gl.webgl.constants :as glc]
@@ -23,9 +24,6 @@
             [thi-ng-geom-starter.shaders :as shaders])
     (:require-macros [cljs-log.core :refer [debug info warn severe]]))
 
-(defonce app (reagent/atom {:stream {:state :wait}
-                            :curr-shader :twirl}))
-
 (defn add-video-container [w h]
   (dom/create-dom! [:video {:width w :height h :hidden false :autoplay true}]
                    (.-body js/document)))
@@ -39,9 +37,9 @@
     (set! (.-src d) url)
     d))
 
-(defn init-texture [container]
+(defn init-texture [app-state-atom container]
   (let [tex (buf/make-canvas-texture
-             (:gl @app)
+             (:gl @app-state-atom)
              container
              {:filter      glc/linear
               :wrap        glc/clamp-to-edge
@@ -49,56 +47,57 @@
               :height      (.-height container)
               :flip        true
               :premultiply false})]
-    (swap! app assoc-in [:scene :img :shader :state :tex] tex)))
+    (swap! app-state-atom assoc-in [:scene :img :shader :state :tex] tex)
+    (debug (get-in @app-state-atom [:scene :img :shader :state :tex]))))
 
-(defn set-stream-state! [state]
-  (swap! app assoc-in [:stream :state] state))
+(defn set-stream-state! [app-state-atom state]
+  (swap! app-state-atom assoc-in [:stream :state] state))
 
-(defn activate-rtc-stream [video stream]
-  (swap! app assoc-in [:stream :video] video)
+(defn activate-rtc-stream [app-state-atom video stream]
+  (debug "activate")
+  (swap! app-state-atom assoc-in [:stream :video] video)
   (set! (.-onerror video)
-        (fn [] (.stop stream) (set-stream-state! :error)))
+        (fn [] (.stop stream) (set-stream-state! app-state-atom :error)))
   (set! (.-onended stream)
-        (fn [] (.stop stream) (set-stream-state! :stopped)))
+        (fn [] (.stop stream) (set-stream-state! app-state-atom :stopped)))
   (set! (.-src video)
         (.createObjectURL (or (aget js/window "URL") (aget js/window "webkitURL")) stream))
-  (set-stream-state! :ready)
-  (init-texture video))
+  (set-stream-state! app-state-atom :ready)
+  (init-texture app-state-atom video))
 
-(defn init-rtc-stream [w h]
+(defn init-rtc-stream [app-state-atom w h]
   (let [video (add-video-container w h)]
     (cond
       (aget js/navigator "webkitGetUserMedia")
       (.webkitGetUserMedia js/navigator #js {:video true}
-                           #(activate-rtc-stream video %)
-                           #(set-stream-state! :forbidden))
+                           #(activate-rtc-stream app-state-atom video %)
+                           #(set-stream-state! app-state-atom :forbidden))
 
       (aget js/navigator "mozGetUserMedia")
       (.mozGetUserMedia js/navigator #js {:video true}
-                        #(activate-rtc-stream video %)
-                        #(set-stream-state! :forbidden))
+                        #(activate-rtc-stream app-state-atom video %)
+                        #(set-stream-state! app-state-atom :forbidden))
 
       :else
-      (set-stream-state! :unavailable))))
+      (set-stream-state! app-state-atom :unavailable))))
 
-(defn init-image [w h]
+(defn init-image [app-state-atom w h]
   (let [url "img/chocolate.jpg"
         image (add-image-container w h url
                                    #(do
-                                      (init-texture %)
-                                      (set-stream-state! :image)))]
-    ;; This is the line that kills the custom shader. (We need this to update
-    ;; frames from video or camera.)
-    (swap! app assoc-in [:stream :video] image)))
+                                      (debug "image loaded")
+                                      (init-texture app-state-atom %)
+                                      (set-stream-state! app-state-atom :image)))]
+    (swap! app-state-atom assoc-in [:stream :video] image)))
 
-(defn init-video [w h]
+(defn init-video [app-state-atom w h]
   (let [c (dom/create-dom! [:video {:width w :height h :hidden false :autoplay true}
                             [:source {:src "video/s.mov"}]]
                            (.-body js/document))]
     (set! (.-oncanplay c) #(do (js/console.log "VIDEO onload")
-                                  (init-texture c)
-                                  (set-stream-state! :video)))
-    (swap! app assoc-in [:stream :video] c)))
+                                  (init-texture app-state-atom c)
+                                  (set-stream-state! app-state-atom :video)))
+    (swap! app-state-atom assoc-in [:stream :video] c)))
 
 (def shader-spec
   {:vs "void main() {
@@ -139,11 +138,11 @@
            ;; :model (make-model gl vr)
            )))
 
-(defn init-app
-  [this]
+(defn do-init
+  [component app-state-atom]
   (let [vw        640
         vh        480
-        gl        (gl/gl-context (reagent/dom-node this))
+        gl        (gl/gl-context (reagent/dom-node component))
         view-rect (gl/get-viewport-rect gl)
         thresh    (sh/make-shader-from-spec gl shaders/threshold-shader-spec)
         hue-shift (sh/make-shader-from-spec gl shaders/hueshift-shader-spec)
@@ -160,33 +159,37 @@
                        :width  512
                        :height 512
                        :depth? true})]
-    (swap! app merge
-           {:gl          gl
-            :view        view-rect
-            :shaders     {:thresh    thresh
-                          :hue-shift hue-shift
-                          :twirl     twirl
-                          :tile      tile
-                          :pixelate  pixelate}
-            :scene       {:fbo     fbo
-                          :fbo-tex fbo-tex
-                          :model   (make-model gl)
-                          :img     (-> (fx/init-fx-quad gl)
-                                       #_ (assoc :shader thresh))}})
-    ;;(init-rtc-stream vw vh)
+    (reset! app-state-atom
+            {:stream {:state :wait}
+             :curr-shader :twirl
+             :gl          gl
+             :view        view-rect
+             :shaders     {:thresh    thresh
+                           :hue-shift hue-shift
+                           :twirl     twirl
+                           :tile      tile
+                           :pixelate  pixelate}
+             :scene       {:fbo     fbo
+                           :fbo-tex fbo-tex
+                           :model   (make-model gl)
+                           :img     (-> (fx/init-fx-quad gl)
+                                        #_ (assoc :shader thresh))}})
+    ;;(init-image app-state-atom vw vh)
+    (init-rtc-stream app-state-atom vw vh)
     ;;(init-video vw vh)
-    (init-image vw vh)
+
     ))
 
 (def try-it true)
 
-(defn update-app
-  [this]
+(defn do-update
+  [this app]
   (fn [t frame]
     (let [{:keys [gl view scene stream shaders curr-shader]} @app]
-      ;;(debug "frame with tex?" (str (get-in scene [:img :shader])))
       (when-let [tex (get-in scene [:img :shader :state :tex])]
-        ;;(gl/configure tex {:image (:video stream)})
+        ;; This is the line that kills the custom shader. (We need this to update
+        ;; frames from video or camera.)
+        (gl/configure tex {:image (:video stream)})
         (gl/bind tex)
         ;; render to texture
         (when try-it (gl/bind (:fbo scene)))
@@ -210,3 +213,14 @@
                    {:eye (vec3 0 0 1.0) :fov 90 :aspect view}))
                  (assoc-in [:uniforms :model] (-> M44 (g/rotate-x t) (g/rotate-y (* t 2)))))))))
       (:active (reagent/state this)))))
+
+(defn app []
+  (reify px/APP
+    (init-app [_ component app-state-atom]
+      (do-init component app-state-atom))
+
+    (update-app [_ component app-state-atom]
+      (do-update component app-state-atom))
+
+    (resize-app [_ app-state]
+      (rebuild-viewport app-state))))

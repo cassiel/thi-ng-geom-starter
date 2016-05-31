@@ -16,8 +16,8 @@
    {:component-did-mount
     (fn [this]
       (reagent/set-state this {:active true})
-      (reset! app-state (px/init-app app))
-      (anim/animate (fn [t frame] (px/update-app app this @app-state t frame))))
+      (px/init-app app this app-state)
+      (anim/animate (px/update-app app this app-state)))
 
     :component-did-update
     (fn [this]
