@@ -1,28 +1,26 @@
 (ns thi-ng-geom-starter.raycast
-    (:require-macros [thi.ng.math.macros :as mm])
-    (:require
-     [reagent.core :as reagent]
-     [thi.ng.math.core :as m :refer [PI HALF_PI TWO_PI]]
-     [thi.ng.color.core :as col]
-     [thi.ng.typedarrays.core :as arrays]
-     [thi.ng.geom.gl.core :as gl]
-     [thi.ng.geom.gl.webgl.constants :as glc]
-     [thi.ng.geom.gl.webgl.animator :as anim]
-     [thi.ng.geom.gl.buffers :as buf]
-     [thi.ng.geom.gl.shaders :as sh]
-     [thi.ng.geom.gl.utils :as glu]
-     [thi.ng.geom.gl.glmesh :as glm]
-     [thi.ng.geom.gl.camera :as cam]
-     [thi.ng.geom.core :as g]
-     [thi.ng.geom.vector :as v :refer [vec2 vec3]]
-     [thi.ng.geom.matrix :as mat :refer [M44]]
-     [thi.ng.geom.aabb :as a]
-     [thi.ng.geom.attribs :as attr]
-     [thi.ng.glsl.core :as glsl :include-macros true]
-     [thi.ng.geom.plane :as pl]
-     [thi.ng.geom.gl.shaders.phong :as phong]))
-
-(defonce app (reagent/atom {}))
+  (:require-macros [thi.ng.math.macros :as mm])
+  (:require [reagent.core :as reagent]
+            [thi-ng-geom-starter.protocols :as px]
+            [thi.ng.math.core :as m :refer [PI HALF_PI TWO_PI]]
+            [thi.ng.color.core :as col]
+            [thi.ng.typedarrays.core :as arrays]
+            [thi.ng.geom.gl.core :as gl]
+            [thi.ng.geom.gl.webgl.constants :as glc]
+            [thi.ng.geom.gl.webgl.animator :as anim]
+            [thi.ng.geom.gl.buffers :as buf]
+            [thi.ng.geom.gl.shaders :as sh]
+            [thi.ng.geom.gl.utils :as glu]
+            [thi.ng.geom.gl.glmesh :as glm]
+            [thi.ng.geom.gl.camera :as cam]
+            [thi.ng.geom.core :as g]
+            [thi.ng.geom.vector :as v :refer [vec2 vec3]]
+            [thi.ng.geom.matrix :as mat :refer [M44]]
+            [thi.ng.geom.aabb :as a]
+            [thi.ng.geom.attribs :as attr]
+            [thi.ng.glsl.core :as glsl :include-macros true]
+            [thi.ng.geom.plane :as pl]
+            [thi.ng.geom.gl.shaders.phong :as phong]))
 
 (enable-console-print!)
 
@@ -33,7 +31,7 @@
         i2  (:p (g/intersect-ray back eye dir))]
     (if (< (g/dist-squared eye i1) (g/dist-squared eye i2)) i1 i2)))
 
-(defn init-app [_]
+(defn do-init []
   (let [gl         (gl/gl-context "main")
         view-rect  (gl/get-viewport-rect gl)
         shader     (sh/make-shader-from-spec gl phong/shader-spec)
@@ -66,35 +64,44 @@
                             :mpos (vec2 (.-clientX %) (.-clientY %))
                             :update-ray true)]
     (.addEventListener js/window "mousemove" update-pos)
-    (.addEventListener js/window "touchmove" #(do (.preventDefault %) (update-pos (aget (.-touches %) 0))))
-    (reset! app {:cam cam
-                 :state state
-                 :view-rect view-rect
-                 :gl gl
-                 :box box
-                 :ground ground
-                 :back back
-                 :planes planes})))
+    (.addEventListener js/window "touchmove" #(do (.preventDefault %)
+                                                  (update-pos (aget (.-touches %) 0))))
+    {:cam cam
+     :state state
+     :view-rect view-rect
+     :gl gl
+     :box box
+     :ground ground
+     :back back
+     :planes planes}))
 
-(defn rebuild-viewport [app] app)
+(defn do-update [component app-state t frame]
+  (when (:active (reagent/state component))
+    (let [{:keys [cam state view-rect gl box ground back planes]} app-state
+          cam  (cam/set-view cam {:eye #(g/rotate-y % (Math/sin t))})
+          isec (if (:update-ray @state)
+                 (let [p (-> (vec3 (:mpos @state) 0)
+                             (mat/unproject-point (m/invert (m/* (:proj cam) (:view cam))) view-rect)
+                             (raycast (:eye cam) ground back))]
+                   (vswap! state assoc :isec p :update-ray false) p)
+                 (:isec @state))]
+      (doto gl
+        (gl/set-viewport view-rect)
+        (gl/clear-color-and-depth-buffer 0.52 0.5 0.5 1 1)
+        (gl/draw-with-shader (cam/apply planes cam))
+        (gl/draw-with-shader
+         (-> box
+             (cam/apply cam)
+             (assoc-in [:uniforms :model] (g/translate M44 isec))))))
+    true))
 
-(defn update-app [this]
-  (fn [t frame]
-    (when (:active (reagent/state this))
-      (let [{:keys [cam state view-rect gl box ground back planes]} @app
-            cam  (cam/set-view cam {:eye #(g/rotate-y % (Math/sin t))})
-            isec (if (:update-ray @state)
-                   (let [p (-> (vec3 (:mpos @state) 0)
-                               (mat/unproject-point (m/invert (m/* (:proj cam) (:view cam))) view-rect)
-                               (raycast (:eye cam) ground back))]
-                     (vswap! state assoc :isec p :update-ray false) p)
-                   (:isec @state))]
-        (doto gl
-          (gl/set-viewport view-rect)
-          (gl/clear-color-and-depth-buffer 0.52 0.5 0.5 1 1)
-          (gl/draw-with-shader (cam/apply planes cam))
-          (gl/draw-with-shader
-           (-> box
-               (cam/apply cam)
-               (assoc-in [:uniforms :model] (g/translate M44 isec))))))
-      true)))
+(defn app []
+  (reify px/APP
+    (init-app [_] {}
+      (do-init))
+
+    (update-app [_ component app-state t frame]
+      (do-update component app-state t frame))
+
+    (resize-app [_ app-state]
+       app-state)))

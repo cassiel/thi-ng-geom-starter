@@ -1,0 +1,30 @@
+-*- mode: org; mode: visual-line; cider-buffer-ns: "thi-ng-geom-starter.protocols" -*-
+#+STARTUP: indent
+#+PROPERTY: header-args:clojure  :tangle protocols.cljs
+#+PROPERTY: header-args:clojure+ :results value verbatim replace
+
+A simple protocol to deal with application initialisation, refresh and window resize.
+
+* Namespace
+
+#+BEGIN_SRC clojure
+  (ns thi-ng-geom-starter.protocols)
+#+END_SRC
+
+* Application
+
+#+BEGIN_SRC clojure
+  (defprotocol APP
+    (init-app [_]
+      "Initialise application. Returns a hash of properties (to be put into
+       an atom for the app state)." )
+
+    (update-app [_ component app-state t frame]
+      "Frame refresh, referring to app contents and component. Return
+       truthy value to indicate continued animation. (Assumes we don't
+       need to change the app state.)" )
+
+    (resize-app [_ app-state]
+      "Rebuild viewport. Take dereferenced application state, return new
+       state (with new viewport settings)." ))
+#+END_SRC

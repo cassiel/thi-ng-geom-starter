@@ -1,6 +1,6 @@
 (ns thi-ng-geom-starter.canvas
   (:require [thi.ng.geom.gl.webgl.animator :as anim]
-            [thi-ng-geom-starter.main :as main]
+            [thi-ng-geom-starter.protocols :as px]
             [reagent.core :as reagent])
   (:require-macros [cljs-log.core :refer [debug info warn severe]]))
 
@@ -11,18 +11,18 @@
                        :h (.-innerHeight js/window)}))
 
 (defn canvas-component
-  [props]
+  [app app-state]
   (reagent/create-class
    {:component-did-mount
     (fn [this]
       (reagent/set-state this {:active true})
-      ((:init props) this)
-      (anim/animate ((:loop props) this)))
+      (reset! app-state (px/init-app app))
+      (anim/animate (fn [t frame] (px/update-app app this @app-state t frame))))
 
     :component-did-update
     (fn [this]
       (debug "UPDATE")
-      ((:update props) this))
+      (swap! app-state #(px/resize-app app %)))
 
     :component-will-unmount
     (fn [this]
@@ -32,8 +32,5 @@
     :reagent-render
     (fn [_]
       @window-size
-      [:canvas#main
-       (merge
-        {:width (.-innerWidth js/window)
-         :height (.-innerHeight js/window)}
-        props)])}))
+      [:canvas#main {:width (.-innerWidth js/window)
+                     :height (.-innerHeight js/window)}])}))

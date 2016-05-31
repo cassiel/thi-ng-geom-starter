@@ -1,0 +1,34 @@
+-*- mode: org; mode: visual-line; cider-buffer-ns: "thi-ng-geom-starter.dummy" -*-
+#+STARTUP: indent
+#+PROPERTY: header-args:clojure  :tangle dummy.cljs
+#+PROPERTY: header-args:clojure+ :results value verbatim replace
+
+* Dummy
+
+A test application to make sure the protocol works and connects into the Reagent and animation machinery.
+
+* Namespaces
+
+#+BEGIN_SRC clojure
+  (ns thi-ng-geom-starter.dummy
+    (:require [thi-ng-geom-starter.protocols :as px])
+    (:require-macros [cljs-log.core :refer [debug info warn severe]]))
+#+END_SRC
+
+* Application
+
+#+BEGIN_SRC clojure
+  (defn app []
+    (reify px/APP
+      (init-app [_]
+        (debug "dummy: INIT")
+        {:junk1 "JUNK" :junk2 "JUNK "})
+
+      (update-app [_ component app-state t frame]
+        (debug "dummy: UPDATE t=" t " frame=" frame)
+        true)
+
+      (resize-app [_ app-state]
+        (debug "RESIZE")
+        app-state)))
+#+END_SRC

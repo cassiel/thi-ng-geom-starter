@@ -33,6 +33,7 @@ Code lifted pretty much verbatim from [[https://github.com/thi-ng/ws-ldn-8/blob/
   (ns thi-ng-geom-starter.core
     (:require [reagent.core :as reagent]
               [thi-ng-geom-starter.canvas :as canvas]
+              [thi-ng-geom-starter.dummy :as dummy]
               [thi-ng-geom-starter.main :as main]
               [thi-ng-geom-starter.knots :as knots]
               [thi-ng-geom-starter.rings :as rings]
@@ -55,15 +56,14 @@ Enable console printing:
 
 Define the application component for Reagent. (Controls to come later.) Replace ~main~ by ~rings~ to see the extrusion demo code, or ~video~ for WebRTC experiments. (We also have ~knots~, but that doesn't have any resizing support.)
 
+This might be slightly dodgy, since the first argument to ~canvas-component~ is a reified object, not a map.
+
 #+BEGIN_SRC clojure
-    (defn app-component
-      []
-      [:div
-       [canvas/canvas-component {:init raycast/init-app
-                                 :loop raycast/update-app
-                                 :update #(swap! raycast/app raycast/rebuild-viewport)}
-                                 ]
-       #_ [controls]])
+  (defn app-component
+    []
+    [:div
+     [canvas/canvas-component (raycast/app) (atom {})]
+     #_ [controls]])
 #+END_SRC
 
 #+RESULTS:
