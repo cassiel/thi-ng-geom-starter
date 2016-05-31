@@ -55,7 +55,7 @@
 #+RESULTS:
 : nil
 
-Application state. Initialised via ~reset!~, modded on update event (from window resize)..
+Application state. Initialised via ~reset!~, modded on update event (from window resize).
 
 #+BEGIN_SRC clojure
   (defonce app (reagent/atom {}))
@@ -75,14 +75,14 @@ Create model, lifted from geometer app. We don't link in the camera here, but in
         (g/as-mesh
          {:mesh    (glm/indexed-gl-mesh 12 #{:col :fnorm})
           ;;:flags   :ewfbs
-          :attribs {:col (->> [[1 0 0] [0 1 0] [0 0 1] [0 1 1] [1 0 1] [1 1 0]]
+          #_ :attribs #_ {:col (->> [[1 0 0] [0 1 0] [0 0 1] [0 1 1] [1 0 1] [1 1 0]]
                               (map col/rgba)
                               (attr/const-face-attribs))}})))
 
   (def turtle-mesh (turtle/plant))
 
   (defn make-model [gl]
-    (-> turtle-mesh
+    (-> old-mesh
         (gl/as-gl-buffer-spec {})
         (assoc :shader (sh/make-shader-from-spec gl phong/shader-spec))
         (gl/make-buffers-in-spec gl glc/static-draw)))
@@ -92,11 +92,11 @@ Create model, lifted from geometer app. We don't link in the camera here, but in
 
 ** COMMENT Test
 #+BEGIN_SRC clojure
-(type turtle-mesh)
+(type old-mesh)
 #+END_SRC
 
 #+RESULTS:
-: thi.ng.geom.types/BasicMesh
+: thi.ng.geom.gl.glmesh/IndexedGLMesh
 
 * Viewport Machinery
 

@@ -33,14 +33,14 @@
       (g/as-mesh
        {:mesh    (glm/indexed-gl-mesh 12 #{:col :fnorm})
         ;;:flags   :ewfbs
-        :attribs {:col (->> [[1 0 0] [0 1 0] [0 0 1] [0 1 1] [1 0 1] [1 1 0]]
+        #_ :attribs #_ {:col (->> [[1 0 0] [0 1 0] [0 0 1] [0 1 1] [1 0 1] [1 1 0]]
                             (map col/rgba)
                             (attr/const-face-attribs))}})))
 
 (def turtle-mesh (turtle/plant))
 
 (defn make-model [gl]
-  (-> turtle-mesh
+  (-> old-mesh
       (gl/as-gl-buffer-spec {})
       (assoc :shader (sh/make-shader-from-spec gl phong/shader-spec))
       (gl/make-buffers-in-spec gl glc/static-draw)))

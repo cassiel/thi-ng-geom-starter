@@ -29,6 +29,9 @@
 ** Other
 
 - [[http://learningthreejs.com/blog/2012/02/07/live-video-in-webgl/][Live Video in WebGL (via THREE.js)]]
+- For FBO, see [[https://github.com/thi-ng/ws-ldn-8/blob/master/day1/ex03/src/ex03/webgl06.cljs][day1/ex03/webgl06]]
+- For video, see [[https://github.com/thi-ng/ws-ldn-8/tree/master/day3/ex06/src/ex06][day3/ex06]]
+- For mesh combination (the Phong example): [[https://github.com/thi-ng/geom/blob/develop/examples/gl/webgl.org#example-4-unproject--scene-raycasting][Unproject]]
 
 * Namespaces
 
@@ -223,7 +226,7 @@ Based on [[file:main.org::*Model:%20Colour-Face%20Lighting%20Cube][main/Model: C
     ;;(g/center)
         (g/as-mesh {:mesh (glm/gl-mesh (* 2 2) #{:uv})
                     :attribs {:uv attr/uv-faces}})
-        (g/into (-> (p/plane v/V3Y -0.5)
+        (g/into (-> (p/plane v/V3X -0.5)
                     (g/as-mesh)))
         (gl/as-gl-buffer-spec {})
         (assoc :shader (sh/make-shader-from-spec gl shader-spec))
@@ -303,7 +306,7 @@ Setup. Generate a GL context (from DOM element ~main~), viewport rectangle and m
       (let [{:keys [gl view scene stream shaders curr-shader]} @app]
         ;;(debug "frame with tex?" (str (get-in scene [:img :shader])))
         (when-let [tex (get-in scene [:img :shader :state :tex])]
-          (gl/configure tex {:image (:video stream)})
+          ;;(gl/configure tex {:image (:video stream)})
           (gl/bind tex)
           ;; render to texture
           (when try-it (gl/bind (:fbo scene)))

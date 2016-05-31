@@ -5,6 +5,8 @@
             [thi-ng-geom-starter.knots :as knots]
             [thi-ng-geom-starter.rings :as rings]
             [thi-ng-geom-starter.video :as video]
+            ;; [thi-ng-geom-starter.ex04 :as ex04]
+            [thi-ng-geom-starter.raycast :as raycast]
             [thi-ng-geom-starter.t-demo :as t-demo]))
 
 (enable-console-print!)
@@ -12,9 +14,9 @@
 (defn app-component
   []
   [:div
-   [canvas/canvas-component {:init video/init-app
-                             :loop video/update-app
-                             :update #(swap! video/app video/rebuild-viewport)}
+   [canvas/canvas-component {:init raycast/init-app
+                             :loop raycast/update-app
+                             :update #(swap! raycast/app raycast/rebuild-viewport)}
                              ]
    #_ [controls]])
 

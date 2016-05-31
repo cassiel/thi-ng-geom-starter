@@ -87,7 +87,9 @@
                                    #(do
                                       (init-texture %)
                                       (set-stream-state! :image)))]
-        (swap! app assoc-in [:stream :video] image)))
+    ;; This is the line that kills the custom shader. (We need this to update
+    ;; frames from video or camera.)
+    (swap! app assoc-in [:stream :video] image)))
 
 (defn init-video [w h]
   (let [c (dom/create-dom! [:video {:width w :height h :hidden false :autoplay true}
@@ -122,7 +124,7 @@
   ;;(g/center)
       (g/as-mesh {:mesh (glm/gl-mesh (* 2 2) #{:uv})
                   :attribs {:uv attr/uv-faces}})
-      (g/into (-> (p/plane v/V3Y -0.5)
+      (g/into (-> (p/plane v/V3X -0.5)
                   (g/as-mesh)))
       (gl/as-gl-buffer-spec {})
       (assoc :shader (sh/make-shader-from-spec gl shader-spec))
@@ -184,7 +186,7 @@
     (let [{:keys [gl view scene stream shaders curr-shader]} @app]
       ;;(debug "frame with tex?" (str (get-in scene [:img :shader])))
       (when-let [tex (get-in scene [:img :shader :state :tex])]
-        (gl/configure tex {:image (:video stream)})
+        ;;(gl/configure tex {:image (:video stream)})
         (gl/bind tex)
         ;; render to texture
         (when try-it (gl/bind (:fbo scene)))
